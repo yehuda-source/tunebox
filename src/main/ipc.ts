@@ -1,6 +1,13 @@
 import { app, dialog, ipcMain, shell, BrowserWindow } from 'electron'
 import { writeFile } from 'fs/promises'
-import type { ArtistRef, Settings, TagEdit, TrackRef } from '../shared/types'
+import type {
+  ArtistRef,
+  Settings,
+  SpotifyMatch,
+  SpotifyTrack,
+  TagEdit,
+  TrackRef
+} from '../shared/types'
 import { getSettings, setSettings } from './settings'
 import * as yt from './youtube/search'
 import { resolveUrl } from './youtube/ytdlp-json'
@@ -8,6 +15,9 @@ import { prefetchStream } from './youtube/stream'
 import * as queue from './downloads/queue'
 import * as library from './library/library'
 import * as follows from './follows'
+import * as spotifyAuth from './spotify/auth'
+import * as spotifyApi from './spotify/api'
+import { importMatches, matchTracks } from './spotify/match'
 import { getToolStatus, updateTools, selfTest } from './binaries/manager'
 import { emit } from './events'
 import log from './log'
@@ -132,6 +142,17 @@ export function registerIpc(): void {
     follow: (artist: ArtistRef) => follows.follow(artist),
     unfollow: (id: string) => follows.unfollow(id),
     check: () => follows.checkFollowed()
+  })
+
+  handle('spotify', {
+    status: () => spotifyAuth.status(),
+    setClientId: (id: string) => spotifyAuth.setClientId(id),
+    signIn: () => spotifyAuth.signIn(),
+    signOut: () => spotifyAuth.signOut(),
+    myPlaylists: () => spotifyApi.myPlaylists(),
+    load: (source: string) => spotifyApi.load(source),
+    match: (tracks: SpotifyTrack[]) => matchTracks(tracks),
+    import: (matches: SpotifyMatch[], name: string | null) => importMatches(matches, name)
   })
 
   handle('tools', {

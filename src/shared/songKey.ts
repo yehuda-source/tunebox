@@ -3,6 +3,9 @@
 
 const VIDEO_TAGS =
   /\s*[([]\s*(official\s+)?(music\s+)?(video|audio|lyrics?(\s+video)?|visuali[sz]er|hd|hq|4k(\s+remaster(ed)?)?|video\s+oficial|clip\s+officiel)\s*[)\]]/gi
+// Remasters are the same song: "Song - Remastered 2011" (Spotify) = "Song (2011 Remaster)" (YouTube).
+const REMASTER =
+  /\s*(?:[-–]\s*|[([]\s*)(?:\d{4}\s+)?(?:digital(?:ly)?\s+)?remaster(?:ed)?(?:\s+version)?(?:\s+\d{4})?\s*[)\]]?/gi
 const FEATURING = /\s*[([]?\s*\b(feat\.?|ft\.?|featuring)\s+[^)\]]*[)\]]?/gi
 
 function clean(s: string): string {
@@ -24,7 +27,7 @@ export function mainArtist(artist: string): string {
 
 export function songKey(title: string, artist: string): string {
   const a = mainArtist(artist)
-  let t = title.replace(VIDEO_TAGS, '').replace(FEATURING, '')
+  let t = title.replace(VIDEO_TAGS, '').replace(REMASTER, '').replace(FEATURING, '')
   // Video uploads are often titled "Artist - Song".
   const dash = t.match(/^(.+?)\s+[-–—]\s+(.+)$/)
   if (dash && mainArtist(dash[1]) === a) t = dash[2]
@@ -91,4 +94,26 @@ export function pickAlternative<T extends AlternativeCandidate>(
     if (!c.durationSec || !original.durationSec) return true
     return Math.abs(c.durationSec - original.durationSec) <= toleranceSec
   })
+}
+
+/**
+ * Pick the YouTube upload for a song from another service (e.g. Spotify).
+ * 'match': same song and length within 5s. 'check': same song but the length differs more
+ * (up to 30s; often a video with an intro). Undefined: nothing trustworthy.
+ */
+export function matchSong<T extends AlternativeCandidate>(
+  target: { title: string; artists: string[]; durationSec?: number },
+  candidates: T[]
+): { candidate: T; status: 'match' | 'check' } | undefined {
+  const wanted = looseKeys(target.title, target.artists.join(', '))
+  let check: T | undefined
+  for (const c of candidates) {
+    const keys = looseKeys(c.title, c.artists.join(', '))
+    if (![...keys].some((k) => wanted.has(k))) continue
+    if (!c.durationSec || !target.durationSec) return { candidate: c, status: 'check' }
+    const diff = Math.abs(c.durationSec - target.durationSec)
+    if (diff <= 5) return { candidate: c, status: 'match' }
+    if (diff <= 30 && !check) check = c
+  }
+  return check ? { candidate: check, status: 'check' } : undefined
 }

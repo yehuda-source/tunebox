@@ -13,6 +13,10 @@ Built with Electron + React (renderer) and Node (main process).
 - **Download queue**: concurrent, retries automatically, cancel/retry per item, survives restarts.
 - **Library**: scans and watches your folders, songs/albums/artists views, tag editing, playlists (export `.m3u8`).
 - **Player**: queue with drag-to-reorder, shuffle/repeat, media keys and OS media controls, remembers where you left off.
+- **Spotify import**: paste a playlist, album or song link (or pick from your playlists and Liked Songs),
+  review how each song matched on YouTube Music, and download them with Spotify's tags, optionally into a
+  TuneBox playlist in the same order. Needs a free Spotify developer app (the Spotify import page walks
+  you through it). Audio always comes from YouTube; Spotify only provides the song list and tags.
 - Command palette (Ctrl+K), dark/light theme, tray mode.
 
 ## Staying working when YouTube changes
@@ -47,6 +51,8 @@ Checks: `npm run typecheck`, `npm run lint`, `npm test`.
 | `errors` | every YouTube request fails (offline) |
 | `slow` | 2.5 s latency, for loading states |
 | `huge` | 5,000 songs, for performance |
+| `notrash` | the music drive has no trash folder |
+| `spotify-setup` / `spotify-signin` | Spotify import before setup / before sign-in |
 
 Add `&theme=light` for the light theme. The same fake backend drives the UI tests in `test/ui`
 (Vitest + Testing Library in jsdom), which run as part of `npm test`.

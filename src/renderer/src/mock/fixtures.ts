@@ -6,6 +6,7 @@ import type {
   DownloadJob,
   LibraryTrack,
   SearchResults,
+  SpotifyTrack,
   ToolStatus,
   TrackRef
 } from '@shared/types'
@@ -255,4 +256,22 @@ export function makeTools(scenario: string): ToolStatus {
     lastUpdateCheck: Date.now() - 3_600_000,
     latestYtdlp: '2026.10.26'
   }
+}
+
+export function makeSpotifyTracks(n: number): SpotifyTrack[] {
+  seed = n * 7
+  return Array.from({ length: n }, (_, i) => {
+    const album = pick(ALBUMS)
+    return {
+      id: `sp${i}`,
+      title: i === 2 ? 'Bohemian Rhapsody - Remastered 2011' : title(i + 40),
+      artists: i % 5 === 0 ? [pick(ARTISTS), pick(ARTISTS)] : [pick(ARTISTS)],
+      album,
+      albumArtist: pick(ARTISTS),
+      trackNumber: (i % 12) + 1,
+      year: String(1990 + (i % 30)),
+      durationSec: 150 + Math.floor(rand() * 200),
+      cover: coverSvg(album, i)
+    }
+  })
 }

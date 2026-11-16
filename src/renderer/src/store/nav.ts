@@ -11,6 +11,7 @@ export type Route =
   | { name: 'playlist'; id: number }
   | { name: 'settings' }
   | { name: 'following' }
+  | { name: 'spotify' }
 
 interface NavState {
   stack: Route[]

@@ -3,11 +3,14 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import App from '../../src/renderer/src/App'
 import { useNav } from '../../src/renderer/src/store/nav'
+import { reset as resetSpotify } from '../../src/renderer/src/store/spotify'
 
 // Testing Library only auto-unmounts with vitest globals; do it explicitly, and start each test at Home.
 afterEach(() => {
   cleanup()
   useNav.setState({ stack: [{ name: 'home' }], index: 0, route: { name: 'home' } })
+  // The Spotify review is kept across visits on purpose; start each test fresh.
+  resetSpotify()
 })
 
 export function renderApp(): { user: ReturnType<typeof userEvent.setup> } {

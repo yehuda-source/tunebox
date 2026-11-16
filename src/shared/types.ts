@@ -92,6 +92,8 @@ export interface DownloadJob {
   batch?: string
   /** Set when another upload of the same song was used because the original was blocked. */
   substitute?: string
+  /** Add the finished song to this playlist, at this position (keeps an imported order). */
+  playlist?: { id: number; position: number }
 }
 
 export type AudioFormat = 'mp3' | 'm4a' | 'opus'
@@ -165,6 +167,50 @@ export interface DuplicateGroup {
   extras: LibraryTrack[]
 }
 
+export interface SpotifyStatus {
+  clientId: string
+  signedIn: boolean
+  user: string | null
+  /** The redirect URI to register in the Spotify developer dashboard. */
+  redirectUri: string
+}
+
+export interface SpotifyCollection {
+  kind: 'playlist' | 'album' | 'track' | 'liked'
+  id: string
+  name: string
+  owner?: string
+  cover?: string
+  total: number
+}
+
+export interface SpotifyTrack {
+  id: string
+  title: string
+  artists: string[]
+  album: string
+  albumArtist: string
+  trackNumber: number | null
+  year: string | null
+  durationSec: number
+  cover?: string
+}
+
+export type SpotifyMatchStatus = 'library' | 'match' | 'check' | 'missing'
+
+export interface SpotifyMatch {
+  spotify: SpotifyTrack
+  status: SpotifyMatchStatus
+  /** The YouTube Music upload to download (for 'match' and 'check'). */
+  candidate?: TrackRef
+  /** The library copy (for 'library'). */
+  libraryTrackId?: number
+}
+
+export interface SpotifyImportResult extends EnqueueResult {
+  playlistId: number | null
+}
+
 export interface EnqueueResult {
   queued: number
   skipped: number
@@ -233,6 +279,19 @@ export interface TuneboxApi {
     unfollow(channelId: string): Promise<void>
     check(): Promise<FollowCheckResult>
   }
+  spotify: {
+    status(): Promise<SpotifyStatus>
+    setClientId(clientId: string): Promise<SpotifyStatus>
+    signIn(): Promise<SpotifyStatus>
+    signOut(): Promise<SpotifyStatus>
+    /** Your playlists, with Liked Songs first. */
+    myPlaylists(): Promise<SpotifyCollection[]>
+    /** A playlist/album/track link, a playlist id, or 'liked'. */
+    load(source: string): Promise<{ collection: SpotifyCollection; tracks: SpotifyTrack[] }>
+    /** Find each track on YouTube Music (progress via 'spotify:progress'). */
+    match(tracks: SpotifyTrack[]): Promise<SpotifyMatch[]>
+    import(matches: SpotifyMatch[], playlistName: string | null): Promise<SpotifyImportResult>
+  }
   tools: {
     status(): Promise<ToolStatus>
     update(): Promise<ToolStatus>
@@ -248,6 +307,7 @@ export interface TuneboxEvents {
   'tools:status': ToolStatus
   'media:command': 'toggle' | 'next' | 'prev'
   'follows:changed': null
+  'spotify:progress': { done: number; total: number }
 }
 
 /** Channels the preload forwards; keep in sync with TuneboxApi. */
@@ -267,6 +327,7 @@ export const API_CHANNELS = {
   ],
   playlists: ['list', 'create', 'rename', 'remove', 'tracks', 'add', 'removeTrack', 'exportM3u'],
   follows: ['list', 'follow', 'unfollow', 'check'],
+  spotify: ['status', 'setClientId', 'signIn', 'signOut', 'myPlaylists', 'load', 'match', 'import'],
   tools: ['status', 'update', 'selfTest']
 } as const
 
@@ -276,5 +337,6 @@ export const EVENT_CHANNELS: (keyof TuneboxEvents)[] = [
   'library:changed',
   'tools:status',
   'media:command',
-  'follows:changed'
+  'follows:changed',
+  'spotify:progress'
 ]

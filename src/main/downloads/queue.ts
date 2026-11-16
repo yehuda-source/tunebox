@@ -50,7 +50,11 @@ export async function initQueue(): Promise<void> {
   pump()
 }
 
-export function enqueue(tracks: TrackRef[], batch?: string): EnqueueResult {
+export function enqueue(
+  tracks: TrackRef[],
+  batch?: string,
+  playlist?: { id: number; positions: number[] }
+): EnqueueResult {
   const s = getSettings()
   const inLibrary = s.skipExisting ? libraryDb().videoIdsInLibrary() : new Set<string>()
   const activeJobs = [...jobs.values()].filter(
@@ -65,7 +69,7 @@ export function enqueue(tracks: TrackRef[], batch?: string): EnqueueResult {
   }
   let queued = 0
   let skipped = 0
-  for (const track of tracks) {
+  for (const [i, track] of tracks.entries()) {
     const artist = track.artists.join(', ')
     if (
       inLibrary.has(track.videoId) ||
@@ -84,7 +88,8 @@ export function enqueue(tracks: TrackRef[], batch?: string): EnqueueResult {
       progress: 0,
       attempts: 0,
       createdAt: Date.now() + queued,
-      batch
+      batch,
+      playlist: playlist ? { id: playlist.id, position: playlist.positions[i] ?? i } : undefined
     }
     jobs.set(job.id, job)
     update(job, {})
@@ -311,5 +316,15 @@ async function pipeline(job: DownloadJob, work: string, signal: AbortSignal): Pr
   }
   libraryDb().recordDownload(t.videoId, dest)
   await addFile(dest, t.videoId)
+  if (job.playlist) {
+    const id = libraryDb().trackIdForPath(dest)
+    if (id != null) {
+      try {
+        libraryDb().addToPlaylistAt(job.playlist.id, id, job.playlist.position)
+      } catch (err) {
+        log.warn('Could not add the download to its playlist (was it deleted?)', err)
+      }
+    }
+  }
   return dest
 }

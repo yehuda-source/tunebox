@@ -7,7 +7,8 @@ import {
   Plus,
   ListMusic,
   AudioLines,
-  BellRing
+  BellRing,
+  Import
 } from 'lucide-react'
 import { useNav, go, type Route } from '../store/nav'
 import { useLibrary } from '../store/library'
@@ -104,6 +105,12 @@ export function Sidebar(): React.JSX.Element {
           label="Following"
           route={{ name: 'following' }}
           active={route.name === 'following'}
+        />
+        <NavItem
+          icon={Import}
+          label="Spotify import"
+          route={{ name: 'spotify' }}
+          active={route.name === 'spotify'}
         />
       </nav>
 

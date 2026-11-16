@@ -1,15 +1,26 @@
 // In-memory implementation of window.api for the browser preview (npm run preview:web).
-// Choose a scenario with ?scenario=default|empty|broken|slow|errors|huge|firstrun|notrash.
+// Choose a scenario with ?scenario=default|empty|broken|slow|errors|huge|firstrun|notrash|spotify-setup|spotify-signin.
 import type {
   DownloadJob,
   FollowedArtist,
   LibraryTrack,
   Playlist,
   Settings,
+  SpotifyMatch,
+  SpotifyStatus,
   TuneboxApi,
   TuneboxEvents
 } from '@shared/types'
-import { makeAlbum, makeArtist, makeJobs, makeLibrary, makeSearch, makeTools } from './fixtures'
+import {
+  coverSvg,
+  makeAlbum,
+  makeArtist,
+  makeJobs,
+  makeLibrary,
+  makeSearch,
+  makeSpotifyTracks,
+  makeTools
+} from './fixtures'
 
 export const scenario = new URLSearchParams(location.search).get('scenario') ?? 'default'
 
@@ -45,6 +56,13 @@ let settings: Settings = {
   autoDownloadFollowed: true,
   followCheckHours: 6,
   firstRunDone: scenario !== 'firstrun'
+}
+
+let spotifyStatus: SpotifyStatus = {
+  clientId: scenario === 'spotify-setup' ? '' : '0123456789abcdef0123456789abcdef',
+  signedIn: scenario !== 'spotify-setup' && scenario !== 'spotify-signin',
+  user: scenario === 'spotify-setup' || scenario === 'spotify-signin' ? null : 'Preview User',
+  redirectUri: 'http://127.0.0.1:43821/callback'
 }
 
 let tracks: LibraryTrack[] = makeLibrary(
@@ -274,6 +292,99 @@ export const mockApi: TuneboxApi = {
     check: async () => {
       await delay(1200)
       return { releases: 1, tracks: 3, errors: [] }
+    }
+  },
+  spotify: {
+    status: async () => spotifyStatus,
+    setClientId: async (id) => {
+      if (id && !/^[0-9a-f]{32}$/i.test(id))
+        throw new Error('That doesn’t look like a Spotify Client ID.')
+      spotifyStatus = { ...spotifyStatus, clientId: id, signedIn: false, user: null }
+      return spotifyStatus
+    },
+    signIn: async () => {
+      await delay(600)
+      spotifyStatus = { ...spotifyStatus, signedIn: true, user: 'Preview User' }
+      return spotifyStatus
+    },
+    signOut: async () => (spotifyStatus = { ...spotifyStatus, signedIn: false, user: null }),
+    myPlaylists: async () => [
+      { kind: 'liked', id: 'liked', name: 'Liked Songs', total: 24 },
+      {
+        kind: 'playlist',
+        id: 'pl1',
+        name: 'Shabbos Mix',
+        owner: 'Preview User',
+        cover: coverSvg('Shabbos Mix', 1),
+        total: 18
+      },
+      {
+        kind: 'playlist',
+        id: 'pl2',
+        name: 'Road Trip',
+        owner: 'Preview User',
+        cover: coverSvg('Road Trip', 4),
+        total: 30
+      }
+    ],
+    load: async (source) => {
+      await latency()
+      if (/spotify\.link/.test(source)) throw new Error('Short spotify.link links can’t be read.')
+      const name =
+        source === 'liked' ? 'Liked Songs' : source === 'pl1' ? 'Shabbos Mix' : 'Road Trip'
+      const tracks = makeSpotifyTracks(source === 'pl1' ? 18 : 24)
+      return {
+        collection: {
+          kind: source === 'liked' ? 'liked' : 'playlist',
+          id: source,
+          name,
+          owner: 'Preview User',
+          total: tracks.length
+        },
+        tracks
+      }
+    },
+    match: async (list) => {
+      for (let done = 0; done <= list.length; done += 3) {
+        emit('spotify:progress', { done: Math.min(done, list.length), total: list.length })
+        await delay(scenario === 'slow' ? 400 : 60)
+      }
+      return list.map((sp, i): SpotifyMatch => {
+        const status = (['match', 'match', 'match', 'check', 'library', 'missing'] as const)[i % 6]
+        if (status === 'library')
+          return { spotify: sp, status, libraryTrackId: (i % tracks.length) + 1 }
+        return {
+          spotify: sp,
+          status,
+          candidate:
+            status === 'missing' && i % 12 === 5
+              ? undefined
+              : {
+                  videoId: `sp${String(i).padStart(9, '0')}`,
+                  title: status === 'check' ? `${sp.title} (Official Video)` : sp.title,
+                  artists: sp.artists,
+                  durationSec:
+                    sp.durationSec + (status === 'check' ? 18 : status === 'missing' ? 60 : 1)
+                }
+        }
+      })
+    },
+    import: async (matches, name) => {
+      const toDownload = matches.filter((m) => m.status !== 'library' && m.candidate)
+      const r = await mockApi.downloads.enqueue(
+        toDownload.map((m) => ({ ...m.candidate!, album: m.spotify.album })),
+        name ? `Spotify: ${name}` : 'Spotify import'
+      )
+      let playlistId: number | null = null
+      if (name) {
+        playlistId = (await mockApi.playlists.create(name)).id
+        await mockApi.playlists.add(
+          playlistId,
+          matches.filter((m) => m.libraryTrackId).map((m) => m.libraryTrackId!)
+        )
+        emit('library:changed', null)
+      }
+      return { ...r, playlistId }
     }
   },
   tools: {

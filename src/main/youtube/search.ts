@@ -154,6 +154,14 @@ export async function search(q: string): Promise<SearchResults> {
   }
 }
 
+/** Songs and videos only (2 requests instead of 4), for matching many tracks quickly. */
+export async function searchTracks(q: string): Promise<TrackRef[]> {
+  return withClient(async (c) => {
+    const [songs, videos] = await Promise.all([shelf(c, q, 'song'), shelf(c, q, 'video')])
+    return compact<TrackRef>([...songs, ...videos].map((s) => mapSong(s)))
+  })
+}
+
 export async function suggest(q: string): Promise<string[]> {
   if (!q.trim()) return []
   try {

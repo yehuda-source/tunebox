@@ -264,6 +264,20 @@ export class LibraryDb {
     this.db.prepare('DELETE FROM playlist_tracks WHERE track_id = ?').run(fromId)
   }
 
+  /** Add at a given position (gaps are fine; order is by position). Used to keep imported order. */
+  addToPlaylistAt(id: number, trackId: number, position: number): void {
+    this.db
+      .prepare(
+        'INSERT OR IGNORE INTO playlist_tracks (playlist_id, track_id, position) VALUES (?, ?, ?)'
+      )
+      .run(id, trackId, position)
+  }
+
+  trackIdForPath(path: string): number | null {
+    const r = this.db.prepare('SELECT id FROM tracks WHERE path = ?').get(path) as Row | undefined
+    return r ? Number(r.id) : null
+  }
+
   removeFromPlaylist(id: number, trackId: number): void {
     this.db
       .prepare('DELETE FROM playlist_tracks WHERE playlist_id = ? AND track_id = ?')
