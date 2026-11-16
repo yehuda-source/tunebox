@@ -1,5 +1,7 @@
 name: Build
 
+# Push a tag like v1.2.3 to build and publish a GitHub Release.
+# "Run workflow" on the Actions tab builds without publishing (files appear under Artifacts).
 on:
   push:
     tags: ['v*']
@@ -17,8 +19,8 @@ jobs:
             target: win
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
@@ -26,10 +28,55 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build:${{ matrix.target }}
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: tunebox-${{ matrix.target }}
           path: |
             dist/*.AppImage
             dist/*.exe
           if-no-files-found: error
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          path: release
+          merge-multiple: true
+      - name: Check the tag matches package.json
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME doesn't match package.json version $version. Bump the version first."
+            exit 1
+          fi
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cat > notes.md <<'EOF'
+          ## Which file do I download?
+
+          | System | File |
+          | --- | --- |
+          | **Windows** (recommended) | `TuneBox-*-setup.exe`: installer with Start menu entry and uninstaller |
+          | Windows, no install | `TuneBox-*-portable.exe`: run it from anywhere |
+          | **Linux** | `TuneBox-*-x86_64.AppImage`: make it executable (`chmod +x`) and run it |
+
+          yt-dlp and ffmpeg are included, and yt-dlp keeps itself up to date.
+          EOF
+          ls -la release
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" release/* --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" release/* \
+              --title "TuneBox $GITHUB_REF_NAME" \
+              --notes-file notes.md \
+              --generate-notes \
+              --verify-tag
+          fi

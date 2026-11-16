@@ -66,6 +66,17 @@ npm run build:win     # dist/TuneBox-<version>-setup.exe and -portable.exe
 
 Each build script downloads the right binaries for the target first.
 
+### Releases
+
+Bump the version, then push a matching tag. GitHub Actions builds Windows (installer + portable
+`.exe`) and Linux (`.AppImage`) and publishes them as a GitHub Release:
+
+```bash
+npm version 1.2.3 && git push && git push --tags
+```
+
+The release is refused if the tag doesn't match `package.json`.
+
 Without Wine, `npm run build:win:zip` still makes a portable Windows build on Linux
 (`dist/TuneBox-<version>-win-x64.zip`: unzip and run `TuneBox.exe`). It has no installer and
 uses Electron's default icon; the installer needs Wine or the GitHub Actions build. Building the Windows target on Linux needs Wine. Instead, push a `v*` tag (or run the **Build** workflow manually) and GitHub Actions builds both on native runners.

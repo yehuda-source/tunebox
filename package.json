@@ -1,6 +1,6 @@
 {
   "name": "tunebox",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "productName": "TuneBox",
   "description": "Search, stream and download music from YouTube Music",
   "main": "./out/main/index.js",
