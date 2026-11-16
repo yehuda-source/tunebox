@@ -25,6 +25,7 @@ const YTDLP_ASSET = isWin
   : process.platform === 'darwin'
     ? 'yt-dlp_macos'
     : 'yt-dlp_linux'
+// "Me at the zoo", YouTube's first upload: short, always available, and what yt-dlp's own tests use.
 const TEST_VIDEO = 'https://www.youtube.com/watch?v=jNQXAC9IVRw'
 const DAY = 24 * 60 * 60 * 1000
 

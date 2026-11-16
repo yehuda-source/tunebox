@@ -55,54 +55,54 @@ describe('SongIndex', () => {
 })
 
 describe('pickAlternative', () => {
-  // The real case: the official video needs a sign-in, the official audio doesn't.
+  // Typical case: the official video needs a sign-in, the official audio doesn't. (Fake ids.)
   const blocked = {
     videoId: 'blockedvid1',
-    title: 'SHWEKEY -  I Can Be',
-    artists: ['Yaakov Shwekey יעקב שוואקי'],
+    title: 'EXAMPLE -  Some Song',
+    artists: ['Example Artist אמן לדוגמה'],
     durationSec: 262
   }
   const found = [
     {
       videoId: 'version2vid',
-      title: 'I Can Be 2.0',
-      artists: ['Yaakov Shwekey'],
+      title: 'Some Song 2.0',
+      artists: ['Example Artist'],
       durationSec: 290
     },
     {
       videoId: 'livevideo01',
-      title: 'I Can Be (Live)',
-      artists: ['Yaakov Shwekey'],
+      title: 'Some Song (Live)',
+      artists: ['Example Artist'],
       durationSec: 302
     },
     {
       videoId: 'blockedvid1',
-      title: 'SHWEKEY -  I Can Be',
-      artists: ['Yaakov Shwekey'],
+      title: 'EXAMPLE -  Some Song',
+      artists: ['Example Artist'],
       durationSec: 262
     },
     {
       videoId: 'covervideo1',
-      title: 'I Can Be Stronger',
-      artists: ['Juda Alcabes'],
+      title: 'Some Song Stronger',
+      artists: ['Cover Singer'],
       durationSec: 293
     },
-    { videoId: 'officialaud', title: 'I Can Be', artists: ['Yaakov Shwekey'], durationSec: 272 }
+    { videoId: 'officialaud', title: 'Some Song', artists: ['Example Artist'], durationSec: 272 }
   ]
 
   it('finds the official audio and skips versions, covers and the blocked upload', () => {
-    expect(pickAlternative({ ...blocked, artists: ['Yaakov Shwekey'] }, found)?.videoId).toBe(
+    expect(pickAlternative({ ...blocked, artists: ['Example Artist'] }, found)?.videoId).toBe(
       'officialaud'
     )
   })
   it('does not guess when the artist name is different', () => {
-    expect(mainArtist('Yaakov Shwekey יעקב שוואקי')).not.toBe(mainArtist('Yaakov Shwekey'))
+    expect(mainArtist('Example Artist אמן לדוגמה')).not.toBe(mainArtist('Example Artist'))
     // Artist names that differ entirely don't match: better to fail than download the wrong song.
     expect(pickAlternative(blocked, found)).toBeUndefined()
   })
   it('rejects a same-named song of a very different length', () => {
     expect(
-      pickAlternative({ ...blocked, artists: ['Yaakov Shwekey'], durationSec: 500 }, found)
+      pickAlternative({ ...blocked, artists: ['Example Artist'], durationSec: 500 }, found)
     ).toBeUndefined()
   })
 })
