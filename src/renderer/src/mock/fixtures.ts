@@ -220,7 +220,11 @@ export function makeJobs(): DownloadJob[] {
         : undefined,
     attempts: status === 'error' ? 3 : 1,
     createdAt: base + i * 1000,
-    batch: i < 5 ? 'Yaakov Shwekey — The Music of Shabbos' : undefined
+    batch: i < 5 ? 'Yaakov Shwekey — The Music of Shabbos' : undefined,
+    substitute:
+      i === 7
+        ? 'The original upload needs a YouTube sign-in, so another upload of the same song was used (“I Can Be”).'
+        : undefined
   }))
 }
 

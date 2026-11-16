@@ -90,6 +90,8 @@ export interface DownloadJob {
   attempts: number
   createdAt: number
   batch?: string
+  /** Set when another upload of the same song was used because the original was blocked. */
+  substitute?: string
 }
 
 export type AudioFormat = 'mp3' | 'm4a' | 'opus'

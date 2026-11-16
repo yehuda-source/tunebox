@@ -4,8 +4,8 @@ export function friendlyError(msg: string): string {
     return 'This video is unavailable.'
   if (/Sign in to confirm your age|age.restricted|inappropriate for some users/i.test(msg))
     return 'This song is age-restricted. Turn on Settings → YouTube sign-in to download it.'
-  if (/not a bot|Sign in to confirm/i.test(msg))
-    return 'YouTube wants you to sign in. Turn on Settings → YouTube sign-in, then retry.'
+  if (/not a bot|Sign in to confirm|Please sign in|members-only|Join this channel/i.test(msg))
+    return 'YouTube only allows this upload when signed in, and no other upload of the song was found. Turn on Settings → YouTube sign-in, then retry.'
   if (/HTTP Error 429|Too Many Requests/i.test(msg))
     return 'YouTube is rate-limiting requests. Wait a few minutes and retry.'
   if (

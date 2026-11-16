@@ -9,7 +9,8 @@ import {
   Ban,
   CheckCircle2,
   AlertCircle,
-  Clock3
+  Clock3,
+  Info
 } from 'lucide-react'
 import type { DownloadJob } from '@shared/types'
 import { useDownloads, downloadUrl, useQueueEta } from '../store/downloads'
@@ -63,6 +64,15 @@ const JobRow = memo(function JobRow({ job }: { job: DownloadJob }): React.JSX.El
         {job.status === 'error' && (
           <div className="mt-1 truncate text-xs text-danger" title={job.error}>
             {job.error}
+          </div>
+        )}
+        {job.substitute && job.status !== 'error' && (
+          <div
+            className="mt-1 flex items-center gap-1 truncate text-xs text-muted"
+            title={job.substitute}
+          >
+            <Info className="h-3 w-3 shrink-0 text-accent" />
+            {job.substitute}
           </div>
         )}
       </div>

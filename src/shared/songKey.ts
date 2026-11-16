@@ -55,3 +55,40 @@ export class SongIndex<T extends SongIndexEntry> {
     )
   }
 }
+
+/** Keys a title could match under: as given, and without an "Anything - " prefix (e.g. "SHWEKEY - I Can Be"). */
+function looseKeys(title: string, artist: string): Set<string> {
+  const keys = new Set([songKey(title, artist)])
+  const dash = title.match(/^.+?\s+[-–—]\s+(.+)$/)
+  if (dash) keys.add(songKey(dash[1], artist))
+  return keys
+}
+
+export interface AlternativeCandidate {
+  videoId: string
+  title: string
+  artists: string[]
+  durationSec?: number
+}
+
+/**
+ * Another upload of the same song, for when YouTube blocks the original (e.g. a music video that
+ * needs a sign-in while the official audio doesn't). Requires the same title and main artist,
+ * so live versions, remixes, "2.0"s and covers never match. Lengths may differ a little because
+ * videos often have intros.
+ */
+export function pickAlternative<T extends AlternativeCandidate>(
+  original: AlternativeCandidate,
+  candidates: T[],
+  toleranceSec = 30
+): T | undefined {
+  const artist = original.artists.join(', ')
+  const wanted = looseKeys(original.title, artist)
+  return candidates.find((c) => {
+    if (c.videoId === original.videoId) return false
+    const keys = looseKeys(c.title, c.artists.join(', '))
+    if (![...keys].some((k) => wanted.has(k))) return false
+    if (!c.durationSec || !original.durationSec) return true
+    return Math.abs(c.durationSec - original.durationSec) <= toleranceSec
+  })
+}

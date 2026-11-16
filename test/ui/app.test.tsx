@@ -53,7 +53,9 @@ describe('TuneBox UI (fake backend)', () => {
     expect(
       await within(main()).findByRole('button', { name: /Retry failed \(1\)/ })
     ).toBeInTheDocument()
-    expect(within(main()).getByText(/YouTube sign-in|Sign in to confirm/)).toBeInTheDocument()
+    expect(within(main()).getByText(/^YouTube wants you to sign in/)).toBeInTheDocument()
+    // A song that was swapped for another upload says so.
+    expect(within(main()).getByText(/another upload of the same song was used/)).toBeInTheDocument()
     expect(within(main()).getByRole('button', { name: 'Clear finished' })).toBeInTheDocument()
   })
 

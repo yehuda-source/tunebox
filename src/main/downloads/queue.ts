@@ -5,6 +5,7 @@ import { join, dirname, extname } from 'path'
 import { randomUUID } from 'crypto'
 import type { DownloadJob, EnqueueResult, TrackRef } from '../../shared/types'
 import { formatArgs } from './format'
+import { findAlternative, SIGN_IN_PATTERN } from '../youtube/alternatives'
 import { SongIndex } from '../../shared/songKey'
 import { ytdlpCommand, forceUpdateIfStale, OUTDATED_PATTERN } from '../binaries/manager'
 import { run, AbortedError, ProcError } from '../proc'
@@ -144,6 +145,11 @@ function pump(): void {
   if (running === 0 && next.length === 0) onIdle()
 }
 
+function hasCookies(): boolean {
+  const s = getSettings()
+  return Boolean(s.cookiesBrowser || (s.cookiesFile && existsSync(s.cookiesFile)))
+}
+
 function onIdle(): void {
   if (!completedThisRun && !failedThisRun) return
   if (getSettings().notifyOnFinish && Notification.isSupported()) {
@@ -178,6 +184,34 @@ async function start(job: DownloadJob): Promise<void> {
         const msg = err instanceof Error ? err.message : String(err)
         const stderr = err instanceof ProcError ? err.result.stderr : msg
         log.warn(`Download ${job.track.videoId} attempt ${job.attempts} failed: ${msg}`)
+        // Retrying a sign-in block never helps. Without cookies, try another upload of the same
+        // song instead (e.g. the official audio when the music video is locked).
+        if (SIGN_IN_PATTERN.test(stderr) && !job.substitute && !hasCookies()) {
+          const alt = await findAlternative(job.track)
+          if (ctrl.signal.aborted) break
+          if (alt && libraryDb().videoIdsInLibrary().has(alt.videoId)) {
+            update(job, {
+              status: 'done',
+              progress: 1,
+              substitute:
+                'This upload needs a YouTube sign-in; you already have another upload of the song.'
+            })
+            completedThisRun++
+            break
+          }
+          if (alt) {
+            log.info(`Using ${alt.videoId} instead of ${job.track.videoId} (sign-in required)`)
+            update(job, {
+              track: { ...alt },
+              attempts: 0,
+              substitute: `The original upload needs a YouTube sign-in, so another upload of the same song was used (“${alt.title}”).`
+            })
+            continue
+          }
+          update(job, { status: 'error', error: friendlyError(msg), speed: null, eta: null })
+          failedThisRun++
+          break
+        }
         if (OUTDATED_PATTERN.test(stderr)) await forceUpdateIfStale()
         if (job.attempts >= MAX_ATTEMPTS) {
           update(job, { status: 'error', error: friendlyError(msg), speed: null, eta: null })
