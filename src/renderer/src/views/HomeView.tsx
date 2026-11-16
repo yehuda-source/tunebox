@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react'
-import { Search, Download, Library, AlertTriangle, Play } from 'lucide-react'
+import { useMemo } from 'react'
+import { Download, Library, AlertTriangle, Play } from 'lucide-react'
 import { useLibrary, groupAlbums, coverUrl } from '../store/library'
-import { useDownloads, downloadUrl } from '../store/downloads'
+import { useDownloads, useQueueEta } from '../store/downloads'
+import { formatEta } from '../lib/eta'
 import { useApp } from '../store/app'
 import { Cover, SectionTitle, Button } from '../components/ui'
 import { Page, Grid } from './common'
@@ -28,7 +29,7 @@ export function HomeView(): React.JSX.Element {
   const tracks = useLibrary((s) => s.tracks)
   const jobs = useDownloads((s) => s.jobs)
   const tools = useApp((s) => s.tools)
-  const [query, setQuery] = useState('')
+  const eta = useQueueEta()
   const active = Object.values(jobs).filter(
     (j) => j.status === 'downloading' || j.status === 'queued' || j.status === 'processing'
   ).length
@@ -53,29 +54,9 @@ export function HomeView(): React.JSX.Element {
       <div className="relative -mx-8 mb-6 overflow-hidden px-8 pb-10 pt-6">
         <div className="pointer-events-none absolute -left-20 -top-40 h-96 w-[60rem] rounded-full bg-accent/20 blur-3xl" />
         <h1 className="relative text-5xl font-black tracking-tight">{greeting()}</h1>
-        <p className="relative mt-2 text-lg text-muted">What do you want to listen to?</p>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault()
-            const v = query.trim()
-            if (!v) return
-            if (/^https?:\/\//.test(v)) {
-              go({ name: 'downloads' })
-              void downloadUrl(v)
-            } else go({ name: 'search', q: v })
-          }}
-          className="relative mt-6 flex h-14 w-full max-w-2xl items-center gap-3 rounded-2xl border border-line bg-panel px-5 shadow-xl transition-colors focus-within:border-accent/60 hover:border-accent/60"
-        >
-          <Search className="h-5 w-5 shrink-0 text-muted" />
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search songs, albums and artists — or paste a link"
-            className="h-full flex-1 bg-transparent text-[15px] outline-none placeholder:text-faint"
-            spellCheck={false}
-          />
-          <kbd className="rounded-md border border-line px-2 py-0.5 text-xs text-muted">Enter</kbd>
-        </form>
+        <p className="relative mt-2 text-lg text-muted">
+          Search above, or start with one of these:
+        </p>
         <div className="relative mt-4 flex flex-wrap gap-2">
           {IDEAS.map((q) => (
             <button
@@ -126,6 +107,7 @@ export function HomeView(): React.JSX.Element {
             <div className="text-2xl font-bold">{active}</div>
             <div className="text-[13px] text-muted">
               {active === 1 ? 'download' : 'downloads'} in progress
+              {active > 0 && <div className="text-faint">{formatEta(eta)}</div>}
             </div>
           </div>
         </button>

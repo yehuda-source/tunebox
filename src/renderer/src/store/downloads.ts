@@ -1,4 +1,6 @@
+import { useEffect, useMemo, useState } from 'react'
 import { create } from 'zustand'
+import { queueEta } from '../lib/eta'
 import type { DownloadJob, TrackRef } from '@shared/types'
 import { toast } from './toast'
 
@@ -7,12 +9,15 @@ interface DownloadState {
   byVideo: Record<string, DownloadJob>
   /** True while a pasted link is being read. */
   resolving: boolean
+  /** When jobs finished this session, for the time-left estimate. */
+  completions: number[]
 }
 
 export const useDownloads = create<DownloadState>(() => ({
   jobs: {},
   byVideo: {},
-  resolving: false
+  resolving: false,
+  completions: []
 }))
 
 function index(jobs: Record<string, DownloadJob>): Record<string, DownloadJob> {
@@ -34,6 +39,11 @@ export function initDownloadStore(): void {
       jobs,
       byVideo: { ...useDownloads.getState().byVideo, [job.track.videoId]: job }
     })
+    if (prev && prev.status !== 'done' && job.status === 'done') {
+      useDownloads.setState({
+        completions: [...useDownloads.getState().completions.slice(-49), Date.now()]
+      })
+    }
     if (prev?.status !== 'error' && job.status === 'error')
       toast.error(`Couldn't download “${job.track.title}”`, job.error)
   })
@@ -79,4 +89,16 @@ export async function downloadUrl(url: string): Promise<boolean> {
   } finally {
     useDownloads.setState({ resolving: false })
   }
+}
+
+/** Estimated seconds left for the whole queue (null while estimating). Re-renders every few seconds. */
+export function useQueueEta(): number | null {
+  const jobs = useDownloads((s) => s.jobs)
+  const completions = useDownloads((s) => s.completions)
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 5000)
+    return () => clearInterval(t)
+  }, [])
+  return useMemo(() => queueEta(Object.values(jobs), completions, now), [jobs, completions, now])
 }

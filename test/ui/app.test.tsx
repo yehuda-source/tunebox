@@ -4,16 +4,20 @@ import { within } from '@testing-library/react'
 import { renderApp, goTo, main, screen, waitFor } from './helpers'
 
 describe('TuneBox UI (fake backend)', () => {
-  it('searches from the home page search box', async () => {
+  it('has a single search bar and searches from it', async () => {
     const { user } = renderApp()
-    const box = await screen.findByPlaceholderText(
-      /search songs, albums and artists — or paste a link/i
-    )
-    await user.type(box, 'shwekey{Enter}')
-    // Results replace the home page, and the top bar shows the query.
+    await screen.findByText(/Search above, or start with one of these/)
+    expect(screen.getAllByRole('textbox')).toHaveLength(1)
+    await user.type(document.getElementById('global-search')!, 'shwekey{Enter}')
     expect(await within(main()).findByText('Top result')).toBeInTheDocument()
-    expect(screen.getByDisplayValue('shwekey')).toBeInTheDocument()
     expect(within(main()).getByRole('button', { name: /^Songs/ })).toBeInTheDocument()
+  })
+
+  it('searches when a suggestion chip on the home page is clicked', async () => {
+    const { user } = renderApp()
+    await user.click(await screen.findByRole('button', { name: 'Radiohead' }))
+    expect(await within(main()).findByText('Top result')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('Radiohead')).toBeInTheDocument()
   })
 
   it('shows a friendly empty state when nothing matches', async () => {

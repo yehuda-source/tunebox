@@ -12,7 +12,8 @@ import {
   Clock3
 } from 'lucide-react'
 import type { DownloadJob } from '@shared/types'
-import { useDownloads, downloadUrl } from '../store/downloads'
+import { useDownloads, downloadUrl, useQueueEta } from '../store/downloads'
+import { formatEta } from '../lib/eta'
 import { findLocal, useLibrary } from '../store/library'
 import { Button, Cover, IconButton, ProgressBar, Empty, Spinner } from '../components/ui'
 import { Page } from './common'
@@ -121,6 +122,7 @@ export function DownloadsView(): React.JSX.Element {
   const [showAll, setShowAll] = useState(false)
 
   const resolving = useDownloads((s) => s.resolving)
+  const eta = useQueueEta()
 
   const { active, finished } = useMemo(() => {
     const all = Object.values(jobs).sort((a, b) => a.createdAt - b.createdAt)
@@ -141,8 +143,10 @@ export function DownloadsView(): React.JSX.Element {
         <div>
           <h1 className="text-4xl font-black tracking-tight">Downloads</h1>
           <div className="mt-1 text-muted">
-            {active.length ? `${active.length} in progress` : 'Nothing downloading'} •{' '}
-            {finished.filter((j) => j.status === 'done').length} completed
+            {active.length
+              ? `${active.length} in progress, ${formatEta(eta)}`
+              : 'Nothing downloading'}{' '}
+            • {finished.filter((j) => j.status === 'done').length} completed
           </div>
         </div>
         <div className="flex gap-2">
