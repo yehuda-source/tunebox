@@ -58,7 +58,11 @@ npm run build:linux   # dist/TuneBox-<version>-x86_64.AppImage
 npm run build:win     # dist/TuneBox-<version>-setup.exe and -portable.exe
 ```
 
-Each build script downloads the right binaries for the target first. Building the Windows target on Linux needs Wine. Instead, push a `v*` tag (or run the **Build** workflow manually) and GitHub Actions builds both on native runners.
+Each build script downloads the right binaries for the target first.
+
+Without Wine, `npm run build:win:zip` still makes a portable Windows build on Linux
+(`dist/TuneBox-<version>-win-x64.zip`: unzip and run `TuneBox.exe`). It has no installer and
+uses Electron's default icon; the installer needs Wine or the GitHub Actions build. Building the Windows target on Linux needs Wine. Instead, push a `v*` tag (or run the **Build** workflow manually) and GitHub Actions builds both on native runners.
 
 ## Layout
 
