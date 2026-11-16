@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import type { LibraryTrack, TrackRef } from '@shared/types'
-import { coverUrl, useLibrary } from './library'
+import { coverUrl, findLocal } from './library'
 import { toast } from './toast'
 import { pickShuffle } from './shuffle'
 
@@ -94,7 +94,7 @@ export function fromLibrary(t: LibraryTrack): PlayItem {
 
 /** Online track → play item. Plays the local copy when it is already downloaded. */
 export function fromRef(t: TrackRef): PlayItem {
-  const local = useLibrary.getState().byVideo.get(t.videoId)
+  const local = findLocal(t)
   if (local) return { ...fromLibrary(local), ref: t }
   return {
     key: `yt:${t.videoId}`,

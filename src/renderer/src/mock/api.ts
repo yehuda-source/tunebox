@@ -1,5 +1,5 @@
 // In-memory implementation of window.api for the browser preview (npm run preview:web).
-// Choose a scenario with ?scenario=default|empty|broken|slow|errors|huge|firstrun.
+// Choose a scenario with ?scenario=default|empty|broken|slow|errors|huge|firstrun|notrash.
 import type {
   DownloadJob,
   FollowedArtist,
@@ -33,6 +33,7 @@ let settings: Settings = {
   bitrate: 0,
   concurrency: 3,
   skipExisting: true,
+  skipDuplicates: true,
   cookiesFile: '',
   cookiesBrowser: '',
   theme: (new URLSearchParams(location.search).get('theme') as Settings['theme']) ?? 'dark',
@@ -200,6 +201,29 @@ export const mockApi: TuneboxApi = {
       emit('library:changed', null)
     },
     showInFolder: async () => undefined,
+    duplicates: async () => {
+      const groups = new Map<string, { keep: LibraryTrack; extras: LibraryTrack[] }>()
+      for (const t of tracks) {
+        const key = `${t.artist}|${t.title}`.toLowerCase()
+        const g = groups.get(key)
+        if (g) g.extras.push(t)
+        else groups.set(key, { keep: t, extras: [] })
+      }
+      return [...groups.values()].filter((g) => g.extras.length)
+    },
+    removeDuplicates: async (permanent) => {
+      // ?scenario=notrash: the music drive has no trash, so only permanent deletion works.
+      if (scenario === 'notrash' && !permanent) {
+        const n = (await mockApi.library.duplicates()).reduce((k, g) => k + g.extras.length, 0)
+        return { removed: 0, failed: n }
+      }
+      const extras = new Set(
+        (await mockApi.library.duplicates()).flatMap((g) => g.extras.map((e) => e.id))
+      )
+      tracks = tracks.filter((t) => !extras.has(t.id))
+      emit('library:changed', null)
+      return { removed: extras.size, failed: 0 }
+    },
     editTags: async (id, tags) => {
       tracks = tracks.map((t) => (t.id === id ? { ...t, ...tags } : t))
       emit('library:changed', null)

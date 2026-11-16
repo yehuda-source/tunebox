@@ -13,7 +13,7 @@ import {
 } from 'lucide-react'
 import type { DownloadJob } from '@shared/types'
 import { useDownloads, downloadUrl } from '../store/downloads'
-import { useLibrary } from '../store/library'
+import { findLocal, useLibrary } from '../store/library'
 import { Button, Cover, IconButton, ProgressBar, Empty, Spinner } from '../components/ui'
 import { Page } from './common'
 import { bytes, cn } from '../lib/format'
@@ -28,7 +28,7 @@ function eta(sec?: number | null): string {
 
 // Memoized: only the job that changed re-renders on each progress tick.
 const JobRow = memo(function JobRow({ job }: { job: DownloadJob }): React.JSX.Element {
-  const local = useLibrary((s) => s.byVideo.get(job.track.videoId))
+  const local = useLibrary((s) => findLocal(job.track, s))
   const active = job.status === 'downloading' || job.status === 'processing'
   return (
     <div className="group flex items-center gap-4 rounded-xl px-3 py-2.5 hover:bg-hover">

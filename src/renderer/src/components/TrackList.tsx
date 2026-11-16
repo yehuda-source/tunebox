@@ -5,13 +5,13 @@ import { Cover, IconButton, ProgressRing, Eq, LinkText } from './ui'
 import { ContextMenu, DropdownMenu } from './menus'
 import { refActions } from './menuActions'
 import { usePlayer, player, fromRef } from '../store/player'
-import { useLibrary } from '../store/library'
+import { findLocal, useLibrary } from '../store/library'
 import { useDownloads, download } from '../store/downloads'
 import { go } from '../store/nav'
 import { duration, cn } from '../lib/format'
 
 export function DownloadButton({ track }: { track: TrackRef }): React.JSX.Element {
-  const inLib = useLibrary((s) => s.byVideo.has(track.videoId))
+  const inLib = useLibrary((s) => findLocal(track, s) !== undefined)
   const job = useDownloads((s) => s.byVideo[track.videoId])
   if (inLib)
     return (
@@ -79,10 +79,7 @@ const Row = memo(function Row({
             : 'grid-cols-[28px_minmax(0,1fr)_64px_72px]'
         )}
         onDoubleClick={() => onPlay(i)}
-        onMouseEnter={() =>
-          !useLibrary.getState().byVideo.has(track.videoId) &&
-          void window.api.search.prefetch(track.videoId)
-        }
+        onMouseEnter={() => !findLocal(track) && void window.api.search.prefetch(track.videoId)}
       >
         <div className="flex justify-center text-muted tabular-nums">
           {isCurrent ? (

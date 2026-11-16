@@ -1,10 +1,13 @@
 import { create } from 'zustand'
-import type { LibraryTrack, Playlist } from '@shared/types'
+import type { LibraryTrack, Playlist, TrackRef } from '@shared/types'
+import { SongIndex } from '@shared/songKey'
 
 interface LibraryState {
   tracks: LibraryTrack[]
   byVideo: Map<string, LibraryTrack>
   byId: Map<number, LibraryTrack>
+  /** Same song under a different video id (other album, compilation, upload). */
+  songs: SongIndex<LibraryTrack>
   loaded: boolean
   playlists: Playlist[]
   load: () => Promise<void>
@@ -15,11 +18,15 @@ export const useLibrary = create<LibraryState>((set) => ({
   tracks: [],
   byVideo: new Map(),
   byId: new Map(),
+  songs: new SongIndex(),
   loaded: false,
   playlists: [],
   load: async () => {
     const tracks = await window.api.library.tracks()
+    const songs = new SongIndex<LibraryTrack>()
+    for (const t of tracks) songs.add(t.title, t.artist, t)
     set({
+      songs,
       tracks,
       loaded: true,
       byId: new Map(tracks.map((t) => [t.id, t])),
@@ -74,3 +81,13 @@ export function groupAlbums(tracks: LibraryTrack[]): AlbumGroup[] {
 
 export const coverUrl = (id: number | null | undefined): string | undefined =>
   id == null ? undefined : `tunebox-media://cover/${id}`
+
+/** The library copy of an online track: same video, or the same song from another album/upload. */
+export function findLocal(
+  t: TrackRef,
+  state: Pick<LibraryState, 'byVideo' | 'songs'> = useLibrary.getState()
+): LibraryTrack | undefined {
+  return (
+    state.byVideo.get(t.videoId) ?? state.songs.find(t.title, t.artists.join(', '), t.durationSec)
+  )
+}

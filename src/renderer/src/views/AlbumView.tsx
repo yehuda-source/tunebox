@@ -5,7 +5,7 @@ import { Button, Cover, Skeleton } from '../components/ui'
 import { Page, ListSkeleton, ErrorState } from './common'
 import { player, fromRef, usePlayer } from '../store/player'
 import { download } from '../store/downloads'
-import { useLibrary } from '../store/library'
+import { findLocal, useLibrary } from '../store/library'
 import { go } from '../store/nav'
 import { totalDuration } from '../lib/format'
 
@@ -14,6 +14,7 @@ export function AlbumView({ id }: { id: string }): React.JSX.Element {
     window.api.search.album(id)
   )
   const byVideo = useLibrary((s) => s.byVideo)
+  const songs = useLibrary((s) => s.songs)
 
   if (error)
     return (
@@ -22,7 +23,7 @@ export function AlbumView({ id }: { id: string }): React.JSX.Element {
       </Page>
     )
 
-  const owned = data ? data.tracks.filter((t) => byVideo.has(t.videoId)).length : 0
+  const owned = data ? data.tracks.filter((t) => findLocal(t, { byVideo, songs })).length : 0
 
   return (
     <Page>

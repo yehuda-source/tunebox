@@ -1,6 +1,6 @@
 import type { LibraryTrack, TrackRef } from '@shared/types'
 import { player, fromLibrary, fromRef } from '../store/player'
-import { useLibrary } from '../store/library'
+import { findLocal, useLibrary } from '../store/library'
 import { download } from '../store/downloads'
 import { dialogs } from '../store/dialogs'
 import { toast } from '../store/toast'
@@ -70,7 +70,7 @@ export function libraryActions(t: LibraryTrack, extra: MenuAction[] = []): MenuA
 }
 
 export function refActions(t: TrackRef): MenuAction[] {
-  const local = useLibrary.getState().byVideo.get(t.videoId)
+  const local = findLocal(t)
   return [
     { label: 'Play', onSelect: () => player.playOne(fromRef(t)) },
     { label: 'Play next', onSelect: () => player.playNext([fromRef(t)]) },

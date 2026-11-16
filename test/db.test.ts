@@ -95,3 +95,21 @@ describe('followed artists', () => {
     db.close()
   })
 })
+
+describe('replaceInPlaylists', () => {
+  it('moves playlist entries to the kept copy without creating repeats', () => {
+    const db = new LibraryDb(join(mkdtempSync(join(tmpdir(), 'tunebox-')), 'lib.db'))
+    db.upsertTrack(row('/keep.mp3'))
+    db.upsertTrack(row('/extra.mp3'))
+    db.upsertTrack(row('/other.mp3'))
+    const [keep, extra, other] = db.allTracks().sort((a, b) => a.id - b.id)
+    const a = db.createPlaylist('Has extra only')
+    const b = db.createPlaylist('Has both')
+    db.addToPlaylist(a.id, [other.id, extra.id])
+    db.addToPlaylist(b.id, [keep.id, extra.id])
+    db.replaceInPlaylists(extra.id, keep.id)
+    expect(db.playlistTrackIds(a.id)).toEqual([other.id, keep.id])
+    expect(db.playlistTrackIds(b.id)).toEqual([keep.id])
+    db.close()
+  })
+})

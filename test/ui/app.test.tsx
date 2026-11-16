@@ -79,6 +79,31 @@ describe('TuneBox UI (fake backend)', () => {
     expect(await within(main()).findByRole('button', { name: /^Following$/ })).toBeInTheDocument()
   })
 
+  it('finds and removes duplicate songs after confirmation', async () => {
+    const { user } = renderApp()
+    await goTo(user, 'Library')
+    await user.clear(await screen.findByPlaceholderText('Filter library'))
+    const before = Number(
+      (await within(main()).findByText(/^\d+ songs/)).textContent!.match(/^(\d+)/)![1]
+    )
+    await user.click(screen.getByRole('button', { name: 'Settings' }))
+    await user.click(await within(main()).findByRole('button', { name: /Find duplicates/ }))
+    const dialog = await screen.findByRole('dialog')
+    expect(within(dialog).getByText(/The first copy you downloaded is/)).toBeInTheDocument()
+    await user.click(within(dialog).getByRole('button', { name: 'Move to trash' }))
+    expect(await screen.findByText(/^Removed \d+ duplicate/)).toBeInTheDocument()
+    await goTo(user, 'Library')
+    // The library reloads shortly after a change.
+    await waitFor(() => {
+      const after = Number(
+        within(main())
+          .getByText(/^\d+ songs/)
+          .textContent!.match(/^(\d+)/)![1]
+      )
+      expect(after).toBeLessThan(before)
+    })
+  })
+
   it('opens and filters the command palette with Ctrl+K', async () => {
     const { user } = renderApp()
     await user.keyboard('{Control>}k{/Control}')

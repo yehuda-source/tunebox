@@ -256,6 +256,14 @@ export class LibraryDb {
     for (const t of trackIds) stmt.run(id, t, pos++)
   }
 
+  /** Point playlist entries at another track (keeping their position), dropping exact repeats. */
+  replaceInPlaylists(fromId: number, toId: number): void {
+    this.db
+      .prepare(`UPDATE OR IGNORE playlist_tracks SET track_id = ? WHERE track_id = ?`)
+      .run(toId, fromId)
+    this.db.prepare('DELETE FROM playlist_tracks WHERE track_id = ?').run(fromId)
+  }
+
   removeFromPlaylist(id: number, trackId: number): void {
     this.db
       .prepare('DELETE FROM playlist_tracks WHERE playlist_id = ? AND track_id = ?')

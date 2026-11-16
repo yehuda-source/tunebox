@@ -5,6 +5,7 @@ import { join, dirname, extname } from 'path'
 import { randomUUID } from 'crypto'
 import type { DownloadJob, EnqueueResult, TrackRef } from '../../shared/types'
 import { formatArgs } from './format'
+import { SongIndex } from '../../shared/songKey'
 import { ytdlpCommand, forceUpdateIfStale, OUTDATED_PATTERN } from '../binaries/manager'
 import { run, AbortedError, ProcError } from '../proc'
 import { PROGRESS_TEMPLATE, parseProgressLine } from './progress'
@@ -51,21 +52,30 @@ export async function initQueue(): Promise<void> {
 export function enqueue(tracks: TrackRef[], batch?: string): EnqueueResult {
   const s = getSettings()
   const inLibrary = s.skipExisting ? libraryDb().videoIdsInLibrary() : new Set<string>()
-  const active = new Set(
-    [...jobs.values()]
-      .filter(
-        (j) => j.status === 'queued' || j.status === 'downloading' || j.status === 'processing'
-      )
-      .map((j) => j.track.videoId)
+  const activeJobs = [...jobs.values()].filter(
+    (j) => j.status === 'queued' || j.status === 'downloading' || j.status === 'processing'
   )
+  const active = new Set(activeJobs.map((j) => j.track.videoId))
+  // The same song often appears on several albums/compilations under different video ids.
+  const songs = new SongIndex<{ durationSec?: number | null }>()
+  if (s.skipDuplicates) {
+    for (const t of libraryDb().allTracks()) songs.add(t.title, t.artist, t)
+    for (const j of activeJobs) songs.add(j.track.title, j.track.artists.join(', '), j.track)
+  }
   let queued = 0
   let skipped = 0
   for (const track of tracks) {
-    if (inLibrary.has(track.videoId) || active.has(track.videoId)) {
+    const artist = track.artists.join(', ')
+    if (
+      inLibrary.has(track.videoId) ||
+      active.has(track.videoId) ||
+      (s.skipDuplicates && songs.find(track.title, artist, track.durationSec))
+    ) {
       skipped++
       continue
     }
     active.add(track.videoId)
+    if (s.skipDuplicates) songs.add(track.title, artist, track)
     const job: DownloadJob = {
       id: randomUUID(),
       track,

@@ -85,7 +85,9 @@ export function registerIpc(): void {
       const t = library.trackById(id)
       if (t) shell.showItemInFolder(t.path)
     },
-    editTags: (id: number, tags: TagEdit) => library.editTags(id, tags)
+    editTags: (id: number, tags: TagEdit) => library.editTags(id, tags),
+    duplicates: () => library.findDuplicates(),
+    removeDuplicates: (permanent?: boolean) => library.removeDuplicates(permanent === true)
   })
 
   // Playlist changes are announced like library changes so every view refreshes.

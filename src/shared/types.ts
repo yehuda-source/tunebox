@@ -102,6 +102,8 @@ export interface Settings {
   bitrate: number
   concurrency: number
   skipExisting: boolean
+  /** Also skip the same song from another album, compilation or upload (matched by name + length). */
+  skipDuplicates: boolean
   cookiesFile: string
   cookiesBrowser: string
   theme: 'dark' | 'light' | 'system'
@@ -156,6 +158,11 @@ export interface FollowCheckResult {
   errors: string[]
 }
 
+export interface DuplicateGroup {
+  keep: LibraryTrack
+  extras: LibraryTrack[]
+}
+
 export interface EnqueueResult {
   queued: number
   skipped: number
@@ -204,6 +211,9 @@ export interface TuneboxApi {
     remove(id: number): Promise<void>
     showInFolder(id: number): Promise<void>
     editTags(id: number, tags: TagEdit): Promise<void>
+    duplicates(): Promise<DuplicateGroup[]>
+    /** Removes the extra copies (to the trash, or deleted when `permanent`), keeping the first-downloaded one. */
+    removeDuplicates(permanent?: boolean): Promise<{ removed: number; failed: number }>
   }
   playlists: {
     list(): Promise<Playlist[]>
@@ -244,7 +254,15 @@ export const API_CHANNELS = {
   settings: ['get', 'set', 'pickFolder', 'pickFile'],
   search: ['query', 'suggest', 'album', 'artist', 'resolveUrl', 'prefetch'],
   downloads: ['list', 'enqueue', 'cancel', 'retry', 'remove', 'cancelAll', 'clearFinished'],
-  library: ['tracks', 'rescan', 'remove', 'showInFolder', 'editTags'],
+  library: [
+    'tracks',
+    'rescan',
+    'remove',
+    'showInFolder',
+    'editTags',
+    'duplicates',
+    'removeDuplicates'
+  ],
   playlists: ['list', 'create', 'rename', 'remove', 'tracks', 'add', 'removeTrack', 'exportM3u'],
   follows: ['list', 'follow', 'unfollow', 'check'],
   tools: ['status', 'update', 'selfTest']

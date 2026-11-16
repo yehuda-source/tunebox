@@ -1,9 +1,10 @@
 import { app, shell } from 'electron'
-import { readdir, stat, mkdir } from 'fs/promises'
+import { readdir, stat, mkdir, unlink } from 'fs/promises'
 import { join, extname, basename, dirname } from 'path'
 import { parseFile } from 'music-metadata'
 import { watch, type FSWatcher } from 'chokidar'
-import type { LibraryTrack, TagEdit } from '../../shared/types'
+import type { DuplicateGroup, LibraryTrack, TagEdit } from '../../shared/types'
+import { SongIndex } from '../../shared/songKey'
 import { LibraryDb, type TrackRow } from './db'
 import { writeTags } from './tagger'
 import { getSettings } from '../settings'
@@ -210,8 +211,17 @@ export function trackById(id: number): LibraryTrack | null {
 export async function removeTrack(id: number): Promise<void> {
   const t = libraryDb().track(id)
   if (!t) return
-  // Move to the OS trash rather than deleting permanently.
-  await shell.trashItem(t.path).catch((err) => log.warn('trashItem failed', err))
+  // Move to the OS trash rather than deleting permanently. If that fails, keep the track:
+  // dropping only the database row would make it reappear on the next scan.
+  try {
+    await shell.trashItem(t.path)
+  } catch (err) {
+    log.warn(`Could not move ${t.path} to the trash`, err)
+    throw new Error(
+      'This file couldn’t be moved to the trash. Its drive may not have a trash folder (common for USB and Windows-formatted drives).',
+      { cause: err }
+    )
+  }
   libraryDb().removeTrack(id)
   emit('library:changed', null)
 }
@@ -226,4 +236,55 @@ export async function editTags(id: number, tags: TagEdit): Promise<void> {
   )
   coverCache.delete(id)
   await addFile(t.path, t.videoId ?? undefined)
+}
+
+/** Groups of the same song stored more than once; the first-downloaded copy is kept. */
+export function findDuplicates(): DuplicateGroup[] {
+  const tracks = [...libraryDb().allTracks()].sort((a, b) => a.id - b.id)
+  const index = new SongIndex<LibraryTrack>()
+  const groups = new Map<number, DuplicateGroup>()
+  for (const t of tracks) {
+    const keep = index.find(t.title, t.artist, t.durationSec)
+    if (!keep) {
+      index.add(t.title, t.artist, t)
+      continue
+    }
+    const g = groups.get(keep.id) ?? { keep, extras: [] }
+    g.extras.push(t)
+    groups.set(keep.id, g)
+  }
+  return [...groups.values()]
+}
+
+/**
+ * Remove the extra copies of duplicate songs. They go to the OS trash; with `permanent`
+ * (offered when the drive has no trash) they are deleted. Playlists that used an extra copy
+ * now point at the kept one.
+ */
+export async function removeDuplicates(
+  permanent = false
+): Promise<{ removed: number; failed: number }> {
+  const db = libraryDb()
+  let removed = 0
+  let failed = 0
+  for (const g of findDuplicates()) {
+    for (const extra of g.extras) {
+      try {
+        if (permanent) await unlink(extra.path)
+        else await shell.trashItem(extra.path)
+      } catch (err) {
+        if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
+          log.warn(`Could not remove ${extra.path}`, err)
+          failed++
+          continue
+        }
+      }
+      db.replaceInPlaylists(extra.id, g.keep.id)
+      db.removeTrack(extra.id)
+      removed++
+    }
+  }
+  if (removed) emit('library:changed', null)
+  log.info(`Removed ${removed} duplicate songs${failed ? `, ${failed} failed` : ''}`)
+  return { removed, failed }
 }

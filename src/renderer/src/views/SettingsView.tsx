@@ -4,6 +4,7 @@ import type { AppInfo, AudioFormat, Settings } from '@shared/types'
 import { useApp } from '../store/app'
 import { Button, Spinner } from '../components/ui'
 import { ToolsPanel } from '../components/ToolsPanel'
+import { DuplicatesButton } from '../components/DuplicatesButton'
 import { Page } from './common'
 import { cn } from '../lib/format'
 
@@ -226,6 +227,12 @@ export function SettingsView(): React.JSX.Element {
             </div>
           </div>
         </div>
+        <Row
+          label="Duplicate songs"
+          hint="Find songs saved more than once (e.g. on an album and a compilation) and remove the extra copies."
+        >
+          <DuplicatesButton />
+        </Row>
       </Section>
 
       <Section title="Downloads">
@@ -265,6 +272,15 @@ export function SettingsView(): React.JSX.Element {
         </Row>
         <Row label="Skip songs already in the library">
           <Toggle checked={s.skipExisting} onChange={(skipExisting) => set({ skipExisting })} />
+        </Row>
+        <Row
+          label="Skip the same song from other albums"
+          hint="Compilations and uploads often repeat songs you have. Matched by title, artist and length."
+        >
+          <Toggle
+            checked={s.skipDuplicates}
+            onChange={(skipDuplicates) => set({ skipDuplicates })}
+          />
         </Row>
         <Row label="Notify when downloads finish">
           <Toggle

@@ -14,6 +14,7 @@ function defaults(): Settings {
     bitrate: 0,
     concurrency: 3,
     skipExisting: true,
+    skipDuplicates: true,
     cookiesFile: '',
     cookiesBrowser: '',
     theme: 'dark',
