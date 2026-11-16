@@ -276,3 +276,34 @@ export function Tabs<T extends string>({
     </div>
   )
 }
+
+/**
+ * Clickable inline text. A <button> inside a truncating line is cut off without an ellipsis,
+ * so links in track rows use a keyboard-accessible span instead.
+ */
+export function LinkText({
+  onClick,
+  children,
+  className
+}: {
+  onClick: () => void
+  children: ReactNode
+  className?: string
+}): React.JSX.Element {
+  return (
+    <span
+      role="link"
+      tabIndex={0}
+      onClick={(e) => {
+        e.stopPropagation()
+        onClick()
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') onClick()
+      }}
+      className={cn('cursor-pointer hover:text-fg hover:underline', className)}
+    >
+      {children}
+    </span>
+  )
+}

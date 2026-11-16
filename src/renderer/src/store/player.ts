@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import type { LibraryTrack, TrackRef } from '@shared/types'
 import { coverUrl, useLibrary } from './library'
 import { toast } from './toast'
+import { pickShuffle } from './shuffle'
 
 export interface PlayItem {
   key: string
@@ -111,12 +112,16 @@ export function fromRef(t: TrackRef): PlayItem {
 // ---------- playback ----------
 
 let loadedKey: string | null = null
+// Shuffle bookkeeping: what played this round, and the order, so "previous" goes back in time.
+let played = new Set<string>()
+let history: number[] = []
 
 async function load(i: number, autoplay = true, startAt = 0): Promise<void> {
   const item = get().queue[i]
   if (!item) return
   set({ index: i, position: startAt, duration: item.durationSec ?? 0, loading: true })
   loadedKey = item.key
+  played.add(item.key)
   audio.src = item.src
   if (startAt) audio.currentTime = startAt
   updateMediaSession(item)
@@ -141,6 +146,8 @@ function prefetchNext(): void {
 export const player = {
   playList(items: PlayItem[], start = 0): void {
     if (!items.length) return
+    played = new Set()
+    history = []
     set({ queue: items, index: start })
     void load(start)
   },
@@ -169,6 +176,7 @@ export const player = {
     void load(i)
   },
   removeAt(i: number): void {
+    history = []
     const { queue, index } = get()
     if (i === index) {
       const rest = queue.filter((_, j) => j !== i)
@@ -180,6 +188,7 @@ export const player = {
     set({ queue: queue.filter((_, j) => j !== i), index: i < index ? index - 1 : index })
   },
   move(from: number, to: number): void {
+    history = []
     const { queue, index } = get()
     if (from === to) return
     const q = [...queue]
@@ -219,21 +228,37 @@ export const player = {
     }
     let ni: number
     if (shuffle && queue.length > 1) {
-      do ni = Math.floor(Math.random() * queue.length)
-      while (ni === index)
-    } else ni = index + 1
-    if (ni >= queue.length) {
-      if (repeat === 'all') ni = 0
-      else {
-        audio.pause()
-        audio.currentTime = 0
-        return
+      ni = pickShuffle(queue.length, index, (i) => played.has(queue[i].key))
+      if (ni < 0) {
+        if (repeat !== 'all') {
+          audio.pause()
+          audio.currentTime = 0
+          return
+        }
+        // New round: everything is eligible again except the current track.
+        played = new Set([queue[index]?.key])
+        ni = pickShuffle(queue.length, index, (i) => played.has(queue[i].key))
+      }
+      history.push(index)
+    } else {
+      ni = index + 1
+      if (ni >= queue.length) {
+        if (repeat !== 'all') {
+          audio.pause()
+          audio.currentTime = 0
+          return
+        }
+        ni = 0
       }
     }
     void load(ni)
   },
   prev(): void {
-    const { index } = get()
+    const { index, shuffle } = get()
+    if (audio.currentTime <= 3 && shuffle && history.length) {
+      const back = history.pop()!
+      if (back < get().queue.length) return void load(back)
+    }
     if (audio.currentTime > 3 || index <= 0) {
       audio.currentTime = 0
       return
@@ -260,6 +285,8 @@ export const player = {
     set({ muted: audio.muted })
   },
   toggleShuffle(): void {
+    played = new Set([current()?.key ?? ''])
+    history = []
     set({ shuffle: !get().shuffle })
   },
   cycleRepeat(): void {

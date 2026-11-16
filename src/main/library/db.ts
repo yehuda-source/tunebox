@@ -154,6 +154,14 @@ export class LibraryDb {
       )
   }
 
+  /** The video id of the library file at `path`; '' for a file without one, null if unknown. */
+  videoIdForPath(path: string): string | null {
+    const r = this.db.prepare('SELECT video_id FROM tracks WHERE path = ?').get(path) as
+      Row | undefined
+    if (!r) return null
+    return r.video_id == null ? '' : String(r.video_id)
+  }
+
   removePath(path: string): boolean {
     return this.db.prepare('DELETE FROM tracks WHERE path = ?').run(path).changes > 0
   }

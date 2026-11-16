@@ -14,7 +14,7 @@ export function safeName(input: string | undefined | null, fallback = 'Unknown')
 
   if (!s) s = fallback
   if (RESERVED.test(s)) s = `_${s}`
-  // Leave room for track numbers and extensions inside the 255-byte limit.
-  while (Buffer.byteLength(s, 'utf8') > 180) s = s.slice(0, -1)
+  // Keep each part short: Windows tools still trip over paths longer than 260 characters.
+  while (Buffer.byteLength(s, 'utf8') > 120) s = s.slice(0, -1)
   return s.trim().replace(/[. ]+$/, '') || fallback
 }

@@ -15,11 +15,11 @@ function TopResult({ r }: { r: SearchResults }): React.JSX.Element | null {
   return (
     <button
       onClick={() => go({ name: 'artist', id: artist.channelId })}
-      className="flex h-full w-full flex-col gap-4 rounded-2xl bg-panel p-5 text-left transition-colors hover:bg-hover"
+      className="flex h-full w-full items-center gap-5 rounded-2xl bg-panel p-5 text-left transition-colors hover:bg-hover xl:flex-col xl:items-start xl:gap-4"
     >
       <Cover src={artist.thumbnail} size={96} rounded="full" className="shadow-xl" />
       <div>
-        <div className="text-3xl font-bold tracking-tight">{artist.name}</div>
+        <div className="text-2xl font-bold tracking-tight xl:text-3xl">{artist.name}</div>
         <div className="mt-1 text-muted">{artist.subtitle ?? 'Artist'}</div>
       </div>
     </button>

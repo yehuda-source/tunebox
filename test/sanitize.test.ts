@@ -19,7 +19,7 @@ describe('safeName', () => {
     expect(safeName('...')).toBe('Unknown')
   })
   it('limits length in bytes', () => {
-    expect(Buffer.byteLength(safeName('é'.repeat(300)))).toBeLessThanOrEqual(180)
+    expect(Buffer.byteLength(safeName('é'.repeat(300)))).toBeLessThanOrEqual(120)
   })
   it('removes control characters', () => {
     expect(safeName('a\u0000b\u0007c')).toBe('abc')

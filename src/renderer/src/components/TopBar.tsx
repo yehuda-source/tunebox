@@ -119,7 +119,7 @@ export function TopBar(): React.JSX.Element {
       </div>
       <button
         onClick={() => useApp.setState({ paletteOpen: true })}
-        className="ml-auto flex h-9 items-center gap-2 rounded-full border border-line px-3 text-[13px] text-muted hover:bg-hover hover:text-fg"
+        className="ml-auto flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-line px-3 text-[13px] text-muted hover:bg-hover hover:text-fg"
         title="Command palette"
       >
         Ctrl K

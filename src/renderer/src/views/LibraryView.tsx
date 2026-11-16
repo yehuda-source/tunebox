@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { useDeferredValue, useMemo, useState } from 'react'
+import { create } from 'zustand'
 import { Library as LibIcon, Search, RefreshCw, Shuffle, Play, X } from 'lucide-react'
 import { useLibrary, groupAlbums, coverUrl } from '../store/library'
 import { LibraryTable } from '../components/LibraryTable'
@@ -11,20 +12,25 @@ import { useScrollEl } from '../lib/scroll'
 
 type Tab = 'songs' | 'albums' | 'artists'
 
+/** Kept outside the view so switching Songs/Albums/Artists keeps what you typed. */
+const useFilter = create<{ filter: string }>(() => ({ filter: '' }))
+
 export function LibraryView({ tab, artist }: { tab: Tab; artist?: string }): React.JSX.Element {
   const { tracks, loaded } = useLibrary()
-  const [filter, setFilter] = useState('')
+  const filter = useFilter((s) => s.filter)
+  const setFilter = (filter: string): void => useFilter.setState({ filter })
+  const deferredFilter = useDeferredValue(filter)
   const [scanning, setScanning] = useState(false)
   const scrollEl = useScrollEl()
 
   const filtered = useMemo(() => {
-    const f = filter.trim().toLowerCase()
+    const f = deferredFilter.trim().toLowerCase()
     let list = artist
       ? tracks.filter((t) => t.albumArtist === artist || t.artist === artist)
       : tracks
     if (f) list = list.filter((t) => `${t.title} ${t.artist} ${t.album}`.toLowerCase().includes(f))
     return list
-  }, [tracks, filter, artist])
+  }, [tracks, deferredFilter, artist])
 
   const albums = useMemo(() => groupAlbums(filtered), [filtered])
   const artists = useMemo(() => {

@@ -15,6 +15,7 @@ import type { ToolInfo, ToolStatus } from '../../shared/types'
 import { getSettings } from '../settings'
 import { run, ProcError } from '../proc'
 import { emit } from '../events'
+import { friendlyError } from '../errors'
 import log from '../log'
 
 const isWin = process.platform === 'win32'
@@ -309,7 +310,11 @@ export async function selfTest(): Promise<ToolStatus> {
     } catch (err2) {
       state.jsMode = previous
       const msg = err2 instanceof ProcError ? err2.message : String(err2)
-      result = { ok: false, message: msg || 'yt-dlp could not reach YouTube.', at: Date.now() }
+      result = {
+        ok: false,
+        message: friendlyError(msg || 'yt-dlp could not reach YouTube.'),
+        at: Date.now()
+      }
     }
   }
   saveState()

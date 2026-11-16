@@ -5,6 +5,7 @@ import * as yt from './youtube/search'
 import { enqueue } from './downloads/queue'
 import { getSettings } from './settings'
 import { emit } from './events'
+import { splitNewReleases } from './follow-filter'
 import log from './log'
 
 const HOUR = 60 * 60 * 1000
@@ -33,11 +34,23 @@ export function unfollow(channelId: string): void {
   emit('follows:changed', null)
 }
 
-async function checkOne(channelId: string, name: string, result: FollowCheckResult): Promise<void> {
+async function checkOne(
+  channelId: string,
+  name: string,
+  followedAt: number,
+  result: FollowCheckResult
+): Promise<void> {
   const db = libraryDb()
   const details = await yt.artist(channelId)
-  const seen = db.seenReleases(channelId)
-  const fresh = [...details.albums, ...details.singles].filter((a) => !seen.has(a.browseId))
+  const { fresh, old } = splitNewReleases(
+    [...details.albums, ...details.singles],
+    db.seenReleases(channelId),
+    followedAt
+  )
+  db.markSeen(
+    channelId,
+    old.map((a) => a.browseId)
+  )
   const tracks: TrackRef[] = []
   for (const release of fresh) {
     const album = await yt.album(release.browseId)
@@ -64,7 +77,7 @@ export function checkFollowed(): Promise<FollowCheckResult> {
     const result: FollowCheckResult = { releases: 0, tracks: 0, errors: [] }
     for (const a of libraryDb().followedArtists()) {
       try {
-        await checkOne(a.channelId, a.name, result)
+        await checkOne(a.channelId, a.name, a.followedAt, result)
       } catch (err) {
         log.warn(`Could not check ${a.name} for new releases`, err)
         result.errors.push(a.name)

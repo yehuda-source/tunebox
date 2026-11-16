@@ -1,0 +1,266 @@
+// In-memory implementation of window.api for the browser preview (npm run preview:web).
+// Choose a scenario with ?scenario=default|empty|broken|slow|errors|huge|firstrun.
+import type {
+  DownloadJob,
+  FollowedArtist,
+  LibraryTrack,
+  Playlist,
+  Settings,
+  TuneboxApi,
+  TuneboxEvents
+} from '@shared/types'
+import { makeAlbum, makeArtist, makeJobs, makeLibrary, makeSearch, makeTools } from './fixtures'
+
+export const scenario = new URLSearchParams(location.search).get('scenario') ?? 'default'
+
+const listeners = new Map<string, Set<(p: unknown) => void>>()
+function emit<K extends keyof TuneboxEvents>(event: K, payload: TuneboxEvents[K]): void {
+  listeners.get(event)?.forEach((cb) => cb(payload))
+}
+
+const delay = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))
+const latency = (): Promise<void> => delay(scenario === 'slow' ? 2500 : 150)
+const fail = (what: string): never => {
+  throw new Error(
+    `Error invoking remote method '${what}': Error: getaddrinfo ENOTFOUND music.youtube.com`
+  )
+}
+
+let settings: Settings = {
+  libraryDir: '/home/user/Music/TuneBox',
+  extraDirs: scenario === 'default' ? ['/mnt/data/Music/Old CDs'] : [],
+  format: 'mp3',
+  bitrate: 0,
+  concurrency: 3,
+  skipExisting: true,
+  cookiesFile: '',
+  cookiesBrowser: '',
+  theme: (new URLSearchParams(location.search).get('theme') as Settings['theme']) ?? 'dark',
+  closeToTray: false,
+  autoUpdateTools: true,
+  ytdlpPath: '',
+  ffmpegPath: '',
+  notifyOnFinish: true,
+  autoDownloadFollowed: true,
+  followCheckHours: 6,
+  firstRunDone: scenario !== 'firstrun'
+}
+
+let tracks: LibraryTrack[] = makeLibrary(
+  scenario === 'empty' || scenario === 'firstrun' ? 0 : scenario === 'huge' ? 5000 : 300
+)
+const jobs = new Map<string, DownloadJob>(
+  (scenario === 'empty' || scenario === 'firstrun' ? [] : makeJobs()).map((j) => [j.id, j])
+)
+let playlists: Playlist[] =
+  scenario === 'default'
+    ? [
+        { id: 1, name: 'Shabbos Table', trackCount: 3, createdAt: Date.now() },
+        {
+          id: 2,
+          name: 'A playlist with a really long name that should be truncated',
+          trackCount: 0,
+          createdAt: Date.now()
+        }
+      ]
+    : []
+const playlistTracks = new Map<number, number[]>([[1, [1, 2, 3]]])
+let follows: FollowedArtist[] =
+  scenario === 'default'
+    ? [
+        {
+          channelId: 'UCartist0',
+          name: 'Yaakov Shwekey',
+          thumbnail: null,
+          followedAt: Date.now() - 86_400_000,
+          lastChecked: Date.now() - 3_600_000,
+          lastNew: null
+        }
+      ]
+    : []
+
+// Simulate download progress so the Downloads view animates.
+setInterval(() => {
+  for (const j of jobs.values()) {
+    if (j.status === 'downloading') {
+      j.progress = Math.min(0.95, j.progress + 0.07)
+      if (j.progress >= 0.95) j.status = 'processing'
+      emit('downloads:update', { ...j })
+    } else if (j.status === 'processing' && Math.random() < 0.3) {
+      j.status = 'done'
+      j.progress = 1
+      emit('downloads:update', { ...j })
+    }
+  }
+  const running = [...jobs.values()].filter(
+    (j) => j.status === 'downloading' || j.status === 'processing'
+  ).length
+  const next = [...jobs.values()].find((j) => j.status === 'queued')
+  if (next && running < settings.concurrency) {
+    next.status = 'downloading'
+    next.progress = 0
+    emit('downloads:update', { ...next })
+  }
+}, 700)
+
+export const mockApi: TuneboxApi = {
+  app: {
+    info: async () => ({
+      version: '1.0.0-preview',
+      platform: 'linux',
+      userData: '/home/user/.config/TuneBox',
+      logsDir: '/home/user/.config/TuneBox/logs'
+    }),
+    openPath: async () => undefined
+  },
+  settings: {
+    get: async () => settings,
+    set: async (patch) => (settings = { ...settings, ...patch }),
+    pickFolder: async () => '/home/user/Music/Picked Folder',
+    pickFile: async () => '/home/user/cookies.txt'
+  },
+  search: {
+    query: async (q) => {
+      await latency()
+      if (scenario === 'errors') fail('search:query')
+      return makeSearch(q)
+    },
+    suggest: async (q) => (q ? [q, `${q} live`, `${q} album`, `${q} remix`] : []),
+    album: async (id) => {
+      await latency()
+      if (scenario === 'errors') fail('search:album')
+      return makeAlbum(id)
+    },
+    artist: async (id) => {
+      await latency()
+      if (scenario === 'errors') fail('search:artist')
+      return makeArtist(id)
+    },
+    resolveUrl: async (url) => {
+      await latency()
+      if (!/youtu/.test(url))
+        throw new Error('That does not look like a YouTube or YouTube Music link.')
+      return makeAlbum('MPREb_url').tracks
+    },
+    prefetch: async () => undefined
+  },
+  downloads: {
+    list: async () => [...jobs.values()],
+    enqueue: async (refs, batch) => {
+      const have = new Set(tracks.map((t) => t.videoId))
+      let queued = 0
+      for (const track of refs) {
+        if (have.has(track.videoId)) continue
+        const job: DownloadJob = {
+          id: crypto.randomUUID(),
+          track,
+          status: 'queued',
+          progress: 0,
+          attempts: 0,
+          createdAt: Date.now() + queued,
+          batch
+        }
+        jobs.set(job.id, job)
+        emit('downloads:update', job)
+        queued++
+      }
+      return { queued, skipped: refs.length - queued }
+    },
+    cancel: async (id) => {
+      const j = jobs.get(id)
+      if (j) emit('downloads:update', Object.assign(j, { status: 'canceled' as const }))
+    },
+    retry: async (id) => {
+      const j = jobs.get(id)
+      if (j)
+        emit(
+          'downloads:update',
+          Object.assign(j, { status: 'queued' as const, progress: 0, error: undefined })
+        )
+    },
+    remove: async (id) => {
+      jobs.delete(id)
+      emit('downloads:removed', id)
+    },
+    cancelAll: async () => {
+      for (const j of jobs.values())
+        if (['queued', 'downloading', 'processing'].includes(j.status))
+          await mockApi.downloads.cancel(j.id)
+    },
+    clearFinished: async () => {
+      for (const j of [...jobs.values()])
+        if (['done', 'error', 'canceled'].includes(j.status)) await mockApi.downloads.remove(j.id)
+    }
+  },
+  library: {
+    tracks: async () => tracks,
+    rescan: async () => delay(800),
+    remove: async (id) => {
+      tracks = tracks.filter((t) => t.id !== id)
+      emit('library:changed', null)
+    },
+    showInFolder: async () => undefined,
+    editTags: async (id, tags) => {
+      tracks = tracks.map((t) => (t.id === id ? { ...t, ...tags } : t))
+      emit('library:changed', null)
+    }
+  },
+  playlists: {
+    list: async () =>
+      playlists.map((p) => ({ ...p, trackCount: playlistTracks.get(p.id)?.length ?? 0 })),
+    create: async (name) => {
+      const p = { id: Date.now(), name, trackCount: 0, createdAt: Date.now() }
+      playlists = [...playlists, p]
+      return p
+    },
+    rename: async (id, name) =>
+      void (playlists = playlists.map((p) => (p.id === id ? { ...p, name } : p))),
+    remove: async (id) => void (playlists = playlists.filter((p) => p.id !== id)),
+    tracks: async (id) => playlistTracks.get(id) ?? [],
+    add: async (id, ids) =>
+      void playlistTracks.set(id, [...new Set([...(playlistTracks.get(id) ?? []), ...ids])]),
+    removeTrack: async (id, tid) =>
+      void playlistTracks.set(
+        id,
+        (playlistTracks.get(id) ?? []).filter((t) => t !== tid)
+      ),
+    exportM3u: async () => '/home/user/Music/Shabbos Table.m3u8'
+  },
+  follows: {
+    list: async () => follows,
+    follow: async (a) => {
+      await latency()
+      follows = [
+        ...follows,
+        {
+          channelId: a.channelId,
+          name: a.name,
+          thumbnail: a.thumbnail ?? null,
+          followedAt: Date.now(),
+          lastChecked: Date.now(),
+          lastNew: null
+        }
+      ]
+      emit('follows:changed', null)
+    },
+    unfollow: async (id) => {
+      follows = follows.filter((f) => f.channelId !== id)
+      emit('follows:changed', null)
+    },
+    check: async () => {
+      await delay(1200)
+      return { releases: 1, tracks: 3, errors: [] }
+    }
+  },
+  tools: {
+    status: async () => makeTools(scenario),
+    update: async () => makeTools(scenario),
+    selfTest: async () => makeTools(scenario)
+  },
+  on: (event, cb) => {
+    const set = listeners.get(event) ?? new Set()
+    set.add(cb as (p: unknown) => void)
+    listeners.set(event, set)
+    return () => set.delete(cb as (p: unknown) => void)
+  }
+}

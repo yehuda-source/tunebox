@@ -8,16 +8,18 @@ import { formatArgs } from './format'
 import { ytdlpCommand, forceUpdateIfStale, OUTDATED_PATTERN } from '../binaries/manager'
 import { run, AbortedError, ProcError } from '../proc'
 import { PROGRESS_TEMPLATE, parseProgressLine } from './progress'
-import { libraryPath } from '../library/organizer'
+import { chooseDestination, libraryPath } from '../library/organizer'
 import { prepareCover, writeTags, moveFile } from '../library/tagger'
 import { addFile, libraryDb } from '../library/library'
 import { getSettings } from '../settings'
 import { emit } from '../events'
+import { friendlyError } from '../errors'
 import log from '../log'
 
 const MAX_ATTEMPTS = 3
 const jobs = new Map<string, DownloadJob>()
 const controllers = new Map<string, AbortController>()
+const reservedPaths = new Map<string, string>()
 let completedThisRun = 0
 let failedThisRun = 0
 
@@ -183,17 +185,6 @@ async function start(job: DownloadJob): Promise<void> {
   }
 }
 
-function friendlyError(msg: string): string {
-  if (/Video unavailable|Private video|removed/i.test(msg)) return 'This video is unavailable.'
-  if (/Sign in to confirm your age|age.restricted/i.test(msg))
-    return 'Age-restricted. Add cookies in Settings → Network.'
-  if (/not a bot|Sign in to confirm/i.test(msg))
-    return 'YouTube asked to sign in. Add cookies in Settings → Network.'
-  if (/getaddrinfo|network|timed out|Connection/i.test(msg))
-    return 'Network problem. Check your connection.'
-  return msg.slice(0, 300)
-}
-
 async function pipeline(job: DownloadJob, work: string, signal: AbortSignal): Promise<string> {
   const s = getSettings()
   const t = job.track
@@ -258,18 +249,22 @@ async function pipeline(job: DownloadJob, work: string, signal: AbortSignal): Pr
     cover
   )
 
-  let dest = libraryPath(s.libraryDir, t, s.format)
-  const owner = existsSync(dest)
-    ? libraryDb()
-        .allTracks()
-        .find((x) => x.path === dest)
-    : null
-  if (owner && owner.videoId && owner.videoId !== t.videoId) {
-    // A different song already has this name: keep both.
-    dest = dest.replace(/(\.\w+)$/, ` [${t.videoId}]$1`)
+  // Concurrent jobs can target the same name (e.g. two "Lecha Dodi" singles), so paths are
+  // reserved until the file is in place.
+  const dest = chooseDestination(
+    libraryPath(s.libraryDir, t, s.format),
+    t.videoId,
+    existsSync,
+    (p) => libraryDb().videoIdForPath(p),
+    reservedPaths
+  )
+  reservedPaths.set(dest, t.videoId)
+  try {
+    await mkdir(dirname(dest), { recursive: true })
+    await moveFile(produced, dest)
+  } finally {
+    reservedPaths.delete(dest)
   }
-  await mkdir(dirname(dest), { recursive: true })
-  await moveFile(produced, dest)
   libraryDb().recordDownload(t.videoId, dest)
   await addFile(dest, t.videoId)
   return dest

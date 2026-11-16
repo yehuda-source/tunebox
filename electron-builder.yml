@@ -11,6 +11,8 @@ files:
   - '!resources/bin/**'
   - '!electron.vite.config.{js,ts,mjs,cjs}'
   - '!vitest.config.ts'
+  - '!vite.preview.config.ts'
+  - '!src/renderer/preview.html'
   - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
   - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'

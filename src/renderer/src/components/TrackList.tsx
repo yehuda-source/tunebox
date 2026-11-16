@@ -1,7 +1,7 @@
 import { memo } from 'react'
 import { Play, Download, Check, MoreHorizontal, AlertCircle, Clock3 } from 'lucide-react'
 import type { TrackRef } from '@shared/types'
-import { Cover, IconButton, ProgressRing, Eq } from './ui'
+import { Cover, IconButton, ProgressRing, Eq, LinkText } from './ui'
 import { ContextMenu, DropdownMenu } from './menus'
 import { refActions } from './menuActions'
 import { usePlayer, player, fromRef } from '../store/player'
@@ -112,12 +112,7 @@ const Row = memo(function Row({
               {track.artists.map((a, k) => (
                 <span key={k}>
                   {k > 0 && ', '}
-                  <button
-                    className="hover:text-fg hover:underline"
-                    onClick={() => go({ name: 'search', q: a })}
-                  >
-                    {a}
-                  </button>
+                  <LinkText onClick={() => go({ name: 'search', q: a })}>{a}</LinkText>
                 </span>
               ))}
             </div>
@@ -126,12 +121,9 @@ const Row = memo(function Row({
         {showAlbum && (
           <div className="truncate text-[13px] text-muted">
             {track.albumId ? (
-              <button
-                className="hover:text-fg hover:underline"
-                onClick={() => go({ name: 'album', id: track.albumId! })}
-              >
+              <LinkText onClick={() => go({ name: 'album', id: track.albumId! })}>
                 {track.album}
-              </button>
+              </LinkText>
             ) : (
               track.album
             )}

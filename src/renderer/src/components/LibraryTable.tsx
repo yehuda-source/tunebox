@@ -2,7 +2,7 @@ import { useMemo, useRef, useState, memo } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { Play, MoreHorizontal, ArrowUp, ArrowDown } from 'lucide-react'
 import type { LibraryTrack } from '@shared/types'
-import { Cover, IconButton, Eq } from './ui'
+import { Cover, IconButton, Eq, LinkText } from './ui'
 import { ContextMenu, DropdownMenu } from './menus'
 import { libraryActions, type MenuAction } from './menuActions'
 import { usePlayer, player, fromLibrary } from '../store/player'
@@ -64,23 +64,21 @@ const Row = memo(function Row({
           <div className="min-w-0">
             <div className={cn('truncate font-medium', isCurrent && 'text-accent')}>{t.title}</div>
             <div className="truncate text-[13px] text-muted">
-              <button
-                className="hover:text-fg hover:underline"
+              <LinkText
                 onClick={() => go({ name: 'library', tab: 'albums', artist: t.albumArtist })}
               >
                 {t.artist}
-              </button>
+              </LinkText>
             </div>
           </div>
         </div>
         {showAlbum && (
           <div className="truncate text-[13px] text-muted">
-            <button
-              className="hover:text-fg hover:underline"
+            <LinkText
               onClick={() => go({ name: 'libalbum', artist: t.albumArtist, album: t.album })}
             >
               {t.album}
-            </button>
+            </LinkText>
           </div>
         )}
         <div className="text-right text-[13px] tabular-nums text-muted">

@@ -12,7 +12,7 @@ export function FirstRun(): React.JSX.Element | null {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-bg/80 p-6 backdrop-blur-md">
-      <div className="w-full max-w-xl rounded-3xl border border-line bg-panel p-8 shadow-2xl">
+      <div className="max-h-full w-full max-w-xl overflow-y-auto rounded-3xl border border-line bg-panel p-8 shadow-2xl">
         <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-accent text-accent-fg">
           <AudioLines className="h-8 w-8" />
         </div>

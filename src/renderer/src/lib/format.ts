@@ -32,5 +32,13 @@ export const cn = (...c: (string | false | null | undefined)[]): string =>
 export function errorMessage(err: unknown): string {
   const msg = err instanceof Error ? err.message : String(err)
   // Strip Electron's "Error invoking remote method 'x': Error: " prefix.
-  return msg.replace(/^Error invoking remote method '[^']+': (\w*Error: )?/, '')
+  const clean = msg.replace(/^Error invoking remote method '[^']+': (\w*Error: )?/, '')
+  if (
+    /ENOTFOUND|EAI_AGAIN|ECONNREFUSED|ECONNRESET|ETIMEDOUT|ERR_INTERNET_DISCONNECTED|getaddrinfo|network/i.test(
+      clean
+    )
+  ) {
+    return 'Can’t reach YouTube. Check your internet connection and try again.'
+  }
+  return clean
 }

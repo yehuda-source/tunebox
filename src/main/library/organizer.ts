@@ -10,3 +10,23 @@ export function libraryPath(libraryDir: string, track: TrackRef, ext: string): s
     track.album && track.trackNumber ? `${String(track.trackNumber).padStart(2, '0')} - ` : ''
   return join(libraryDir, artist, album, `${num}${safeName(track.title, 'Untitled')}.${ext}`)
 }
+
+/**
+ * Pick a free destination. Another song that already has (or is about to get) this path keeps it,
+ * and this one gets its video id appended. Re-downloading the same video overwrites its own file.
+ */
+export function chooseDestination(
+  dest: string,
+  videoId: string,
+  exists: (p: string) => boolean,
+  ownerOf: (p: string) => string | null,
+  reserved: Map<string, string>
+): string {
+  const taken = (p: string): boolean => {
+    const claim = reserved.get(p)
+    if (claim) return claim !== videoId
+    return exists(p) && ownerOf(p) !== videoId
+  }
+  if (!taken(dest)) return dest
+  return dest.replace(/(\.\w+)$/, ` [${videoId}]$1`)
+}

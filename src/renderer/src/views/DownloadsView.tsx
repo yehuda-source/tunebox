@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { memo, useMemo, useState } from 'react'
 import {
   Download,
   Link2,
@@ -18,12 +18,16 @@ import { Button, Cover, IconButton, ProgressBar, Empty, Spinner } from '../compo
 import { Page } from './common'
 import { bytes, cn } from '../lib/format'
 
+// Rendering thousands of finished rows makes the page sluggish, so show the latest ones first.
+const FINISHED_PREVIEW = 100
+
 function eta(sec?: number | null): string {
   if (!sec) return ''
   return sec > 60 ? `${Math.round(sec / 60)} min left` : `${Math.round(sec)}s left`
 }
 
-function JobRow({ job }: { job: DownloadJob }): React.JSX.Element {
+// Memoized: only the job that changed re-renders on each progress tick.
+const JobRow = memo(function JobRow({ job }: { job: DownloadJob }): React.JSX.Element {
   const local = useLibrary((s) => s.byVideo.get(job.track.videoId))
   const active = job.status === 'downloading' || job.status === 'processing'
   return (
@@ -109,11 +113,12 @@ function JobRow({ job }: { job: DownloadJob }): React.JSX.Element {
       </div>
     </div>
   )
-}
+})
 
 export function DownloadsView(): React.JSX.Element {
   const jobs = useDownloads((s) => s.jobs)
   const [url, setUrl] = useState('')
+  const [showAll, setShowAll] = useState(false)
 
   const resolving = useDownloads((s) => s.resolving)
 
@@ -213,9 +218,16 @@ export function DownloadsView(): React.JSX.Element {
               <h2 className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-faint">
                 Finished
               </h2>
-              {finished.map((j) => (
+              {(showAll ? finished : finished.slice(0, FINISHED_PREVIEW)).map((j) => (
                 <JobRow key={j.id} job={j} />
               ))}
+              {!showAll && finished.length > FINISHED_PREVIEW && (
+                <div className="px-3 pt-3">
+                  <Button size="sm" variant="ghost" onClick={() => setShowAll(true)}>
+                    Show all {finished.length}
+                  </Button>
+                </div>
+              )}
             </section>
           )}
         </>

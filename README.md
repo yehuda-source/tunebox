@@ -33,6 +33,24 @@ npm run dev
 
 Checks: `npm run typecheck`, `npm run lint`, `npm test`.
 
+## Testing the UI without Electron
+
+`npm run preview:web` serves the real React UI in a normal browser with a fake backend
+(`src/renderer/src/mock`), at <http://localhost:5199/preview.html>. Pick a situation with `?scenario=`:
+
+| scenario | what it shows |
+| --- | --- |
+| `default` | 300 songs (Hebrew/English, long names, missing albums/covers), downloads in every state, playlists, a followed artist |
+| `empty` | brand-new library, nothing downloaded |
+| `firstrun` | the welcome screen |
+| `broken` | yt-dlp missing and the YouTube self-test failing |
+| `errors` | every YouTube request fails (offline) |
+| `slow` | 2.5 s latency, for loading states |
+| `huge` | 5,000 songs, for performance |
+
+Add `&theme=light` for the light theme. The same fake backend drives the UI tests in `test/ui`
+(Vitest + Testing Library in jsdom), which run as part of `npm test`.
+
 ## Building
 
 ```bash
@@ -50,5 +68,5 @@ src/preload/     contextBridge: exposes the typed window.api
 src/shared/      types shared by both sides
 src/renderer/    React UI (Tailwind, Zustand, Radix)
 scripts/         fetch-binaries.mjs
-test/            vitest unit tests
+test/            vitest unit tests; test/ui renders the app against the fake backend
 ```
