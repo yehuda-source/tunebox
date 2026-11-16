@@ -23,7 +23,7 @@
     "test": "vitest run",
     "fetch-binaries": "node scripts/fetch-binaries.mjs",
     "preview:web": "vite --config vite.preview.config.ts",
-    "build:win:zip": "node scripts/fetch-binaries.mjs win && electron-vite build && electron-builder --win zip -c.win.signAndEditExecutable=false -c.win.artifactName=\"${productName}-${version}-win-x64.${ext}\""
+    "build:win:zip": "node scripts/fetch-binaries.mjs win && electron-vite build && electron-builder --win zip -c.win.signAndEditExecutable=false"
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.2",

@@ -26,6 +26,8 @@ extraResources:
 npmRebuild: false
 win:
   executableName: TuneBox
+  # Used by the zip target; nsis and portable set their own names below.
+  artifactName: ${productName}-${version}-win-x64.${ext}
   target:
     - target: nsis
       arch: [x64]
