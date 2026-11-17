@@ -5,6 +5,7 @@ import type {
   ArtistDetails,
   ArtistRef,
   SearchResults,
+  ShowRef,
   TrackRef
 } from '../../shared/types'
 import { ytdlpSearch } from './ytdlp-json'
@@ -122,15 +123,88 @@ async function shelf(
   return res.contents?.flatMap((s: any) => s.contents ?? []) ?? []
 }
 
+const flexText = (it: any, i: number): string => text(it?.flex_columns?.[i]?.title)
+
+/** "Podcast • Ben Shapiro" → podcast show; the id "MPSP<playlist id>" holds the YouTube playlist. */
+function mapPodcast(it: any): ShowRef | null {
+  if (!it?.id || it.item_type !== 'podcast_show') return null
+  const meta = flexText(it, 1)
+    .split('•')
+    .map((x) => x.trim())
+  return {
+    kind: 'podcast',
+    id: String(it.id).replace(/^MPSP/, ''),
+    title: text(it.title) || flexText(it, 0) || 'Podcast',
+    author: meta.slice(1).join(' • ') || undefined,
+    subtitle: 'Podcast',
+    thumbnail: bestThumb(it.thumbnails ?? it.thumbnail)
+  }
+}
+
+/** "Episode • 2d ago • Show name" → an episode saved under that show. */
+function mapEpisode(it: any): TrackRef | null {
+  if (!it?.id || it.item_type !== 'non_music_track') return null
+  const meta = flexText(it, 1)
+    .split('•')
+    .map((x) => x.trim())
+  const show = meta.length > 2 ? meta.slice(2).join(' • ') : meta[1] || 'Podcasts'
+  return {
+    videoId: it.id,
+    title: text(it.title) || flexText(it, 0),
+    artists: [show],
+    durationSec: it.duration?.seconds || undefined,
+    thumbnail: `https://i.ytimg.com/vi/${it.id}/hqdefault.jpg`,
+    show
+  }
+}
+
+function mapChannel(c: any): ShowRef | null {
+  const a = c?.author
+  if (c?.type !== 'Channel' || !a?.id) return null
+  const thumb: string | undefined = a.thumbnails?.at?.(-1)?.url
+  // youtubei.js reports the @handle as subscriber_count and the subscribers as video_count.
+  const handle = text(c.subscriber_count)
+  const subs = text(c.video_count)
+  return {
+    kind: 'channel',
+    id: a.id,
+    title: text(a.name) || 'Channel',
+    author: handle.startsWith('@') ? handle : undefined,
+    subtitle:
+      [handle.startsWith('@') ? handle : '', /subscriber/i.test(subs) ? subs : '']
+        .filter(Boolean)
+        .join(' • ') || 'Channel',
+    thumbnail: thumb ? (thumb.startsWith('//') ? `https:${thumb}` : thumb) : undefined
+  }
+}
+
+/** Never let the podcast/channel lookups break music search. */
+const optional = <T>(p: Promise<T[]>, what: string): Promise<T[]> =>
+  p.catch((err) => {
+    log.warn(`${what} search failed`, err)
+    return []
+  })
+
 export async function search(q: string): Promise<SearchResults> {
   const query = q.trim()
   try {
     return await withClient(async (c) => {
-      const [songs, albums, artists, videos] = await Promise.all([
+      const [songs, albums, artists, videos, mixed, channels] = await Promise.all([
         shelf(c, query, 'song'),
         shelf(c, query, 'album'),
         shelf(c, query, 'artist'),
-        shelf(c, query, 'video')
+        shelf(c, query, 'video'),
+        // The unfiltered search is the only one that returns podcasts and episodes.
+        optional(
+          c.music
+            .search(query)
+            .then((r: any) => r.contents?.flatMap((s: any) => s.contents ?? []) ?? []),
+          'Podcast'
+        ),
+        optional(
+          c.search(query, { type: 'channel' }).then((r: any) => r.channels ?? r.results ?? []),
+          'Channel'
+        )
       ])
       return {
         query,
@@ -138,6 +212,9 @@ export async function search(q: string): Promise<SearchResults> {
         albums: compact(albums.map(mapAlbum)),
         artists: compact(artists.map(mapArtist)),
         videos: compact(videos.map((s) => mapSong(s))),
+        podcasts: compact<ShowRef>(mixed.map(mapPodcast)),
+        episodes: compact<TrackRef>(mixed.map(mapEpisode)),
+        channels: compact<ShowRef>(channels.map(mapChannel)).slice(0, 12),
         source: 'ytmusic' as const
       }
     })
@@ -149,6 +226,9 @@ export async function search(q: string): Promise<SearchResults> {
       albums: [],
       artists: [],
       videos: [],
+      podcasts: [],
+      episodes: [],
+      channels: [],
       source: 'ytdlp'
     }
   }

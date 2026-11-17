@@ -3,6 +3,7 @@
 import type {
   DownloadJob,
   FollowedArtist,
+  FollowedShow,
   LibraryTrack,
   Playlist,
   Settings,
@@ -18,6 +19,7 @@ import {
   makeJobs,
   makeLibrary,
   makeSearch,
+  makeShow,
   makeSpotifyTracks,
   makeTools
 } from './fixtures'
@@ -57,6 +59,21 @@ let settings: Settings = {
   followCheckHours: 6,
   firstRunDone: scenario !== 'firstrun'
 }
+
+let followedShows: FollowedShow[] =
+  scenario === 'default'
+    ? [
+        {
+          kind: 'podcast',
+          id: 'PLfakepodcast02',
+          title: 'Torah Talks With A Very Long Podcast Name',
+          thumbnail: null,
+          followedAt: Date.now() - 86_400_000,
+          lastChecked: Date.now() - 600_000,
+          lastNew: Date.now() - 3_600_000
+        }
+      ]
+    : []
 
 let spotifyStatus: SpotifyStatus = {
   clientId: scenario === 'spotify-setup' ? '' : '0123456789abcdef0123456789abcdef',
@@ -160,6 +177,11 @@ export const mockApi: TuneboxApi = {
       if (!/youtu/.test(url))
         throw new Error('That does not look like a YouTube or YouTube Music link.')
       return makeAlbum('MPREb_url').tracks
+    },
+    show: async (kind, id, limit = 100) => {
+      await latency()
+      if (scenario === 'errors') fail('search:show')
+      return makeShow(kind, id, limit)
     },
     prefetch: async () => undefined
   },
@@ -292,6 +314,27 @@ export const mockApi: TuneboxApi = {
     check: async () => {
       await delay(1200)
       return { releases: 1, tracks: 3, errors: [] }
+    },
+    shows: async () => followedShows,
+    followShow: async (sh) => {
+      await latency()
+      followedShows = [
+        ...followedShows,
+        {
+          kind: sh.kind,
+          id: sh.id,
+          title: sh.title,
+          thumbnail: sh.thumbnail ?? null,
+          followedAt: Date.now(),
+          lastChecked: Date.now(),
+          lastNew: null
+        }
+      ]
+      emit('follows:changed', null)
+    },
+    unfollowShow: async (id) => {
+      followedShows = followedShows.filter((f) => f.id !== id)
+      emit('follows:changed', null)
     }
   },
   spotify: {

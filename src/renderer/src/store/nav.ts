@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import type { ShowKind } from '@shared/types'
 
 export type Route =
   | { name: 'home' }
@@ -12,6 +13,7 @@ export type Route =
   | { name: 'settings' }
   | { name: 'following' }
   | { name: 'spotify' }
+  | { name: 'show'; kind: ShowKind; id: string }
 
 interface NavState {
   stack: Route[]

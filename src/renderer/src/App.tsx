@@ -18,6 +18,7 @@ import { PlaylistView } from './views/PlaylistView'
 import { SettingsView } from './views/SettingsView'
 import { FollowingView } from './views/FollowingView'
 import { SpotifyView } from './views/SpotifyView'
+import { ShowView } from './views/ShowView'
 import { useNav, type Route } from './store/nav'
 import { useApp, initAppStore } from './store/app'
 import { initLibraryStore } from './store/library'
@@ -60,6 +61,8 @@ function View({ route }: { route: Route }): React.JSX.Element {
       return <FollowingView />
     case 'spotify':
       return <SpotifyView />
+    case 'show':
+      return <ShowView kind={route.kind} id={route.id} />
   }
 }
 

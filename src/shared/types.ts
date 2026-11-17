@@ -11,6 +11,8 @@ export interface TrackRef {
   thumbnail?: string
   trackNumber?: number
   year?: string
+  /** Set for podcast/channel episodes: saved under Podcasts/<show>/ instead of Artist/Album. */
+  show?: string
 }
 
 export interface AlbumRef {
@@ -29,12 +31,36 @@ export interface ArtistRef {
   subtitle?: string
 }
 
+export type ShowKind = 'podcast' | 'channel'
+
+/** A podcast (YouTube playlist id) or a YouTube channel (channel id). */
+export interface ShowRef {
+  kind: ShowKind
+  id: string
+  title: string
+  author?: string
+  thumbnail?: string
+  subtitle?: string
+}
+
+export interface ShowDetails extends ShowRef {
+  description?: string
+  /** Total episodes when known (podcasts); channels don't report it. */
+  total: number | null
+  /** Newest first. */
+  episodes: TrackRef[]
+  hasMore: boolean
+}
+
 export interface SearchResults {
   query: string
   songs: TrackRef[]
   albums: AlbumRef[]
   artists: ArtistRef[]
   videos: TrackRef[]
+  podcasts: ShowRef[]
+  episodes: TrackRef[]
+  channels: ShowRef[]
   /** 'ytdlp' means YouTube Music was unreachable and the yt-dlp fallback was used. */
   source: 'ytmusic' | 'ytdlp'
 }
@@ -156,6 +182,16 @@ export interface FollowedArtist {
   lastNew: number | null
 }
 
+export interface FollowedShow {
+  kind: ShowKind
+  id: string
+  title: string
+  thumbnail: string | null
+  followedAt: number
+  lastChecked: number | null
+  lastNew: number | null
+}
+
 export interface FollowCheckResult {
   releases: number
   tracks: number
@@ -241,6 +277,8 @@ export interface TuneboxApi {
     album(browseId: string): Promise<AlbumDetails>
     artist(channelId: string): Promise<ArtistDetails>
     resolveUrl(url: string): Promise<TrackRef[]>
+    /** A podcast or channel with its newest `limit` episodes. */
+    show(kind: ShowKind, id: string, limit?: number): Promise<ShowDetails>
     /** Resolve a stream URL ahead of time so playback starts faster. */
     prefetch(videoId: string): Promise<void>
   }
@@ -278,6 +316,9 @@ export interface TuneboxApi {
     follow(artist: ArtistRef): Promise<void>
     unfollow(channelId: string): Promise<void>
     check(): Promise<FollowCheckResult>
+    shows(): Promise<FollowedShow[]>
+    followShow(show: ShowRef): Promise<void>
+    unfollowShow(id: string): Promise<void>
   }
   spotify: {
     status(): Promise<SpotifyStatus>
@@ -314,7 +355,7 @@ export interface TuneboxEvents {
 export const API_CHANNELS = {
   app: ['info', 'openPath'],
   settings: ['get', 'set', 'pickFolder', 'pickFile'],
-  search: ['query', 'suggest', 'album', 'artist', 'resolveUrl', 'prefetch'],
+  search: ['query', 'suggest', 'album', 'artist', 'resolveUrl', 'show', 'prefetch'],
   downloads: ['list', 'enqueue', 'cancel', 'retry', 'remove', 'cancelAll', 'clearFinished'],
   library: [
     'tracks',
@@ -326,7 +367,7 @@ export const API_CHANNELS = {
     'removeDuplicates'
   ],
   playlists: ['list', 'create', 'rename', 'remove', 'tracks', 'add', 'removeTrack', 'exportM3u'],
-  follows: ['list', 'follow', 'unfollow', 'check'],
+  follows: ['list', 'follow', 'unfollow', 'check', 'shows', 'followShow', 'unfollowShow'],
   spotify: ['status', 'setClientId', 'signIn', 'signOut', 'myPlaylists', 'load', 'match', 'import'],
   tools: ['status', 'update', 'selfTest']
 } as const

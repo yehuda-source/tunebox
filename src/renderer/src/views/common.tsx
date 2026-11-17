@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react'
 import { AlertTriangle } from 'lucide-react'
-import type { AlbumRef, ArtistRef } from '@shared/types'
+import type { AlbumRef, ArtistRef, ShowRef } from '@shared/types'
 import { Cover, Skeleton, Button } from '../components/ui'
 import { go } from '../store/nav'
-import { errorMessage } from '../lib/format'
+import { cn, errorMessage } from '../lib/format'
 
 export function Page({ children }: { children: ReactNode }): React.JSX.Element {
   return <div className="mx-auto w-full max-w-[1400px] px-8 pb-16">{children}</div>
@@ -48,6 +48,35 @@ export function ArtistCard({ artist }: { artist: ArtistRef }): React.JSX.Element
         <div className="truncate font-medium">{artist.name}</div>
         <div className="truncate text-[13px] text-muted">
           {artist.subtitle?.split('•').slice(1).join('•').trim() || 'Artist'}
+        </div>
+      </div>
+    </button>
+  )
+}
+
+/** A podcast (square) or YouTube channel (round) in search results. */
+export function ShowCard({ show }: { show: ShowRef }): React.JSX.Element {
+  const round = show.kind === 'channel'
+  return (
+    <button
+      onClick={() => go({ name: 'show', kind: show.kind, id: show.id })}
+      className={cn(
+        'group flex flex-col gap-2 rounded-xl p-3 transition-colors hover:bg-hover',
+        round ? 'items-center text-center' : 'text-left'
+      )}
+    >
+      <Cover
+        src={show.thumbnail}
+        size="100%"
+        rounded={round ? 'full' : 'lg'}
+        className="aspect-square shadow-lg"
+      />
+      <div className="w-full min-w-0">
+        <div className="truncate font-medium">{show.title}</div>
+        <div className="truncate text-[13px] text-muted">
+          {[round ? show.subtitle : 'Podcast', round ? '' : show.author]
+            .filter(Boolean)
+            .join(' • ')}
         </div>
       </div>
     </button>

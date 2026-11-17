@@ -10,7 +10,7 @@ import { SongIndex } from '../../shared/songKey'
 import { ytdlpCommand, forceUpdateIfStale, OUTDATED_PATTERN } from '../binaries/manager'
 import { run, AbortedError, ProcError } from '../proc'
 import { PROGRESS_TEMPLATE, parseProgressLine } from './progress'
-import { chooseDestination, libraryPath } from '../library/organizer'
+import { chooseDestination, formatUploadDate, libraryPath } from '../library/organizer'
 import { prepareCover, writeTags, moveFile } from '../library/tagger'
 import { addFile, libraryDb } from '../library/library'
 import { getSettings } from '../settings'
@@ -250,16 +250,20 @@ async function pipeline(job: DownloadJob, work: string, signal: AbortSignal): Pr
     PROGRESS_TEMPLATE,
     '--print',
     'after_move:TBFILE|%(filepath)s',
+    '--print',
+    'after_move:TBDATE|%(upload_date)s',
     '-o',
     join(work, 'audio.%(ext)s'),
     `https://www.youtube.com/watch?v=${t.videoId}`
   ])
   let produced: string | null = null
+  let uploadDate: string | undefined
   await run(cmd, args, {
     env,
     signal,
     onLine: (line) => {
       if (line.startsWith('TBFILE|')) produced = line.slice(7).trim()
+      if (line.startsWith('TBDATE|')) uploadDate = formatUploadDate(line.slice(7).trim())
       const p = parseProgressLine(line)
       if (p && Date.now() - lastEmit > 200) {
         lastEmit = Date.now()
@@ -284,15 +288,17 @@ async function pipeline(job: DownloadJob, work: string, signal: AbortSignal): Pr
     work
   )
   if (signal.aborted) throw new AbortedError()
+  // Episodes are filed under their show, dated by upload day.
+  const episode = Boolean(t.show)
   await writeTags(
     produced,
     {
       title: t.title,
       artist: t.artists.join(', '),
-      album: t.album,
-      albumArtist: t.albumArtist || t.artists[0],
-      trackNumber: t.album ? t.trackNumber : null,
-      year: t.year,
+      album: episode ? t.show : t.album,
+      albumArtist: episode ? t.show : t.albumArtist || t.artists[0],
+      trackNumber: episode ? null : t.album ? t.trackNumber : null,
+      year: episode ? (uploadDate ?? t.year) : (t.year ?? uploadDate?.slice(0, 4)),
       videoId: t.videoId
     },
     cover
@@ -301,7 +307,7 @@ async function pipeline(job: DownloadJob, work: string, signal: AbortSignal): Pr
   // Concurrent jobs can target the same name (e.g. two "Lecha Dodi" singles), so paths are
   // reserved until the file is in place.
   const dest = chooseDestination(
-    libraryPath(s.libraryDir, t, s.format),
+    libraryPath(s.libraryDir, t, s.format, uploadDate),
     t.videoId,
     existsSync,
     (p) => libraryDb().videoIdForPath(p),

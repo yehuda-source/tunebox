@@ -25,11 +25,11 @@ describe('LibraryDb', () => {
 
   it('migrates a new database to the latest schema', () => {
     const db = new LibraryDb(file)
-    expect(db.schemaVersion).toBe(2)
+    expect(db.schemaVersion).toBe(3)
     db.close()
     // Re-opening must not re-run migrations.
     const again = new LibraryDb(file)
-    expect(again.schemaVersion).toBe(2)
+    expect(again.schemaVersion).toBe(3)
     again.close()
   })
 
@@ -79,9 +79,9 @@ describe('LibraryDb', () => {
 describe('followed artists', () => {
   const file = join(mkdtempSync(join(tmpdir(), 'tunebox-')), 'lib.db')
 
-  it('migrates to v2 and tracks seen releases', () => {
+  it('tracks seen releases for followed artists', () => {
     const db = new LibraryDb(file)
-    expect(db.schemaVersion).toBe(2)
+    expect(db.schemaVersion).toBe(3)
     db.follow('UC1', 'Artist', null, ['A1', 'A2'])
     expect(db.followedArtists().map((a) => a.name)).toEqual(['Artist'])
     expect([...db.seenReleases('UC1')].sort()).toEqual(['A1', 'A2'])
@@ -110,6 +110,22 @@ describe('replaceInPlaylists', () => {
     db.replaceInPlaylists(extra.id, keep.id)
     expect(db.playlistTrackIds(a.id)).toEqual([other.id, keep.id])
     expect(db.playlistTrackIds(b.id)).toEqual([keep.id])
+    db.close()
+  })
+})
+
+describe('followed podcasts and channels', () => {
+  it('stores shows and their seen episodes, removed with the show', () => {
+    const db = new LibraryDb(join(mkdtempSync(join(tmpdir(), 'tunebox-')), 'lib.db'))
+    db.followShow('podcast', 'PL1', 'The Show', null, ['e1', 'e2'])
+    expect(db.followedShows()).toMatchObject([{ kind: 'podcast', id: 'PL1', title: 'The Show' }])
+    db.markEpisodesSeen('PL1', ['e3'])
+    db.markShowChecked('PL1', true)
+    expect([...db.seenEpisodes('PL1')].sort()).toEqual(['e1', 'e2', 'e3'])
+    expect(db.followedShows()[0].lastNew).not.toBeNull()
+    db.unfollowShow('PL1')
+    expect(db.followedShows()).toEqual([])
+    expect(db.seenEpisodes('PL1').size).toBe(0)
     db.close()
   })
 })

@@ -3,6 +3,8 @@ import { writeFile } from 'fs/promises'
 import type {
   ArtistRef,
   Settings,
+  ShowKind,
+  ShowRef,
   SpotifyMatch,
   SpotifyTrack,
   TagEdit,
@@ -10,7 +12,7 @@ import type {
 } from '../shared/types'
 import { getSettings, setSettings } from './settings'
 import * as yt from './youtube/search'
-import { resolveUrl } from './youtube/ytdlp-json'
+import { loadShow, resolveUrl } from './youtube/ytdlp-json'
 import { prefetchStream } from './youtube/stream'
 import * as queue from './downloads/queue'
 import * as library from './library/library'
@@ -74,6 +76,8 @@ export function registerIpc(): void {
     album: (id: string) => yt.album(id),
     artist: (id: string) => yt.artist(id),
     resolveUrl: (url: string) => resolveUrl(url),
+    show: (kind: ShowKind, id: string, limit?: number) =>
+      loadShow(kind, id, Math.min(Math.max(Number(limit) || 100, 1), 1000)),
     prefetch: (videoId: string) => prefetchStream(videoId)
   })
 
@@ -141,7 +145,10 @@ export function registerIpc(): void {
     list: () => follows.listFollowed(),
     follow: (artist: ArtistRef) => follows.follow(artist),
     unfollow: (id: string) => follows.unfollow(id),
-    check: () => follows.checkFollowed()
+    check: () => follows.checkFollowed(),
+    shows: () => follows.listFollowedShows(),
+    followShow: (show: ShowRef) => follows.followShow(show),
+    unfollowShow: (id: string) => follows.unfollowShow(id)
   })
 
   handle('spotify', {

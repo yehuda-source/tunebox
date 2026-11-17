@@ -85,7 +85,9 @@ export function Cover({
         rounded === 'full' && 'rounded-full',
         className
       )}
-      style={{ width: size, height: size }}
+      // Fixed sizes set both sides; "100%" sizes set only the width and let aspect-square
+      // (from className) make the height match. A 100% height would stretch it to the row.
+      style={typeof size === 'number' ? { width: size, height: size } : { width: size }}
     >
       {show ? (
         <img

@@ -1,5 +1,12 @@
 import { DatabaseSync } from 'node:sqlite'
-import type { DownloadJob, FollowedArtist, LibraryTrack, Playlist } from '../../shared/types'
+import type {
+  DownloadJob,
+  FollowedArtist,
+  FollowedShow,
+  LibraryTrack,
+  Playlist,
+  ShowKind
+} from '../../shared/types'
 
 const MIGRATIONS: string[] = [
   `CREATE TABLE tracks (
@@ -40,6 +47,20 @@ const MIGRATIONS: string[] = [
      channel_id TEXT NOT NULL REFERENCES followed_artists(channel_id) ON DELETE CASCADE,
      browse_id TEXT NOT NULL,
      PRIMARY KEY (channel_id, browse_id)
+   );`,
+  `CREATE TABLE followed_shows (
+     id TEXT PRIMARY KEY,
+     kind TEXT NOT NULL,
+     title TEXT NOT NULL,
+     thumbnail TEXT,
+     followed_at INTEGER NOT NULL,
+     last_checked INTEGER,
+     last_new INTEGER
+   );
+   CREATE TABLE seen_episodes (
+     show_id TEXT NOT NULL REFERENCES followed_shows(id) ON DELETE CASCADE,
+     video_id TEXT NOT NULL,
+     PRIMARY KEY (show_id, video_id)
    );`
 ]
 
@@ -341,5 +362,71 @@ export class LibraryDb {
         `UPDATE followed_artists SET last_checked = ?, last_new = CASE WHEN ? THEN ? ELSE last_new END WHERE channel_id = ?`
       )
       .run(Date.now(), foundNew ? 1 : 0, Date.now(), channelId)
+  }
+
+  // ----- followed podcasts & channels -----
+
+  followedShows(): FollowedShow[] {
+    const rows = this.db
+      .prepare('SELECT * FROM followed_shows ORDER BY title COLLATE NOCASE')
+      .all() as Row[]
+    return rows.map((r) => ({
+      kind: String(r.kind) as ShowKind,
+      id: String(r.id),
+      title: String(r.title),
+      thumbnail: r.thumbnail == null ? null : String(r.thumbnail),
+      followedAt: Number(r.followed_at),
+      lastChecked: r.last_checked == null ? null : Number(r.last_checked),
+      lastNew: r.last_new == null ? null : Number(r.last_new)
+    }))
+  }
+
+  followShow(
+    kind: ShowKind,
+    id: string,
+    title: string,
+    thumbnail: string | null,
+    seen: string[]
+  ): void {
+    this.db.exec('BEGIN')
+    try {
+      this.db
+        .prepare(
+          `INSERT INTO followed_shows (id, kind, title, thumbnail, followed_at, last_checked) VALUES (?, ?, ?, ?, ?, ?)
+           ON CONFLICT(id) DO UPDATE SET title = excluded.title, thumbnail = excluded.thumbnail`
+        )
+        .run(id, kind, title, thumbnail, Date.now(), Date.now())
+      this.markEpisodesSeen(id, seen)
+      this.db.exec('COMMIT')
+    } catch (err) {
+      this.db.exec('ROLLBACK')
+      throw err
+    }
+  }
+
+  unfollowShow(id: string): void {
+    this.db.prepare('DELETE FROM followed_shows WHERE id = ?').run(id)
+  }
+
+  seenEpisodes(showId: string): Set<string> {
+    const rows = this.db
+      .prepare('SELECT video_id FROM seen_episodes WHERE show_id = ?')
+      .all(showId) as Row[]
+    return new Set(rows.map((r) => String(r.video_id)))
+  }
+
+  markEpisodesSeen(showId: string, videoIds: string[]): void {
+    const stmt = this.db.prepare(
+      'INSERT OR IGNORE INTO seen_episodes (show_id, video_id) VALUES (?, ?)'
+    )
+    for (const v of videoIds) stmt.run(showId, v)
+  }
+
+  markShowChecked(id: string, foundNew: boolean): void {
+    this.db
+      .prepare(
+        `UPDATE followed_shows SET last_checked = ?, last_new = CASE WHEN ? THEN ? ELSE last_new END WHERE id = ?`
+      )
+      .run(Date.now(), foundNew ? 1 : 0, Date.now(), id)
   }
 }

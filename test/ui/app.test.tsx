@@ -72,13 +72,16 @@ describe('TuneBox UI (fake backend)', () => {
   it('follows and unfollows an artist', async () => {
     const { user } = renderApp()
     await user.type(document.getElementById('global-search')!, 'radiohead{Enter}')
-    const [topResult] = await within(main()).findAllByRole('button', { name: /monthly audience/ })
-    await user.click(topResult)
+    // The first artist card (the top result may be a channel now).
+    const [artistCard] = await within(main()).findAllByRole('button', { name: /monthly audience/ })
+    await user.click(artistCard)
     // The fake backend already follows this artist: unfollow, then follow again.
     await user.click(await within(main()).findByRole('button', { name: /^Following$/ }))
     const follow = await within(main()).findByRole('button', { name: /^Follow$/ })
     await goTo(user, 'Following')
-    expect(await within(main()).findByText(/not following anyone yet/)).toBeInTheDocument()
+    // The artist is gone from Following (a followed podcast remains in the fake data).
+    expect(await within(main()).findByText('Podcasts & channels')).toBeInTheDocument()
+    expect(within(main()).queryByRole('heading', { name: 'Artists' })).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: /Back/ }))
     expect(follow).not.toBeInTheDocument()
     await user.click(await within(main()).findByRole('button', { name: /^Follow$/ }))

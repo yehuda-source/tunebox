@@ -18,3 +18,16 @@ export function splitNewReleases(
   }
   return { fresh: unseen.filter(isRecent), old: unseen.filter((a) => !isRecent(a)) }
 }
+
+/**
+ * New episodes of a followed show, newest first. At most `cap` are downloaded per check; any
+ * extra unseen ones (e.g. a back catalogue suddenly made public) are only marked as seen.
+ */
+export function splitNewEpisodes<T extends { videoId: string }>(
+  newestFirst: T[],
+  seen: Set<string>,
+  cap = 10
+): { fresh: T[]; skipped: T[] } {
+  const unseen = newestFirst.filter((e) => !seen.has(e.videoId))
+  return { fresh: unseen.slice(0, cap), skipped: unseen.slice(cap) }
+}

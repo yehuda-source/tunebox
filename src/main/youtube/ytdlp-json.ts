@@ -1,8 +1,11 @@
-import type { TrackRef } from '../../shared/types'
+import type { ShowDetails, ShowKind, TrackRef } from '../../shared/types'
 import { ytdlpCommand } from '../binaries/manager'
 import { run } from '../proc'
 
 interface YtdlpEntry {
+  description?: string
+  playlist_count?: number
+  view_count?: number
   id: string
   title?: string
   track?: string
@@ -39,9 +42,13 @@ export function entryToTrack(e: YtdlpEntry, fallback: Partial<TrackRef> = {}): T
   }
 }
 
-export async function ytdlpJson(target: string, flat: boolean): Promise<YtdlpEntry> {
+export async function ytdlpJson(
+  target: string,
+  flat: boolean,
+  more: string[] = []
+): Promise<YtdlpEntry> {
   const extra = flat ? ['--flat-playlist'] : ['--no-playlist']
-  const { cmd, args, env } = ytdlpCommand(['-J', '--skip-download', ...extra, target])
+  const { cmd, args, env } = ytdlpCommand(['-J', '--skip-download', ...extra, ...more, target])
   const r = await run(cmd, args, { env, timeoutMs: 120000 })
   return JSON.parse(r.stdout) as YtdlpEntry
 }
@@ -77,4 +84,44 @@ export async function resolveUrl(url: string): Promise<TrackRef[]> {
           : {}
       )
     )
+}
+
+/**
+ * A podcast (YouTube playlist) or channel with its newest `limit` episodes. Both list newest
+ * first; dates aren't available in this quick listing and are read when an episode downloads.
+ */
+export async function loadShow(kind: ShowKind, id: string, limit = 100): Promise<ShowDetails> {
+  if (!/^[\w-]+$/.test(id)) throw new Error('Invalid podcast or channel id.')
+  const url =
+    kind === 'podcast'
+      ? `https://www.youtube.com/playlist?list=${id}`
+      : `https://www.youtube.com/channel/${id}/videos`
+  // Ask for one extra to know whether there's more.
+  const data = await ytdlpJson(url, true, ['--playlist-end', String(limit + 1)])
+  const author = (data.channel ?? data.uploader ?? '').replace(/ - Topic$/, '') || undefined
+  const title = (data.title ?? '').replace(/ - Videos$/, '') || author || 'Untitled'
+  const show = kind === 'podcast' ? title : (author ?? title)
+  const entries = (data.entries ?? []).filter(
+    (e) => e.id && e.title !== '[Private video]' && e.title !== '[Deleted video]'
+  )
+  const thumbs = data.thumbnails ?? []
+  return {
+    kind,
+    id,
+    title,
+    author,
+    subtitle: kind === 'podcast' ? 'Podcast' : 'Channel',
+    description: data.description || undefined,
+    thumbnail: [...thumbs].sort((a, b) => (b.width ?? 0) - (a.width ?? 0))[0]?.url,
+    total: kind === 'podcast' ? (data.playlist_count ?? null) : null,
+    hasMore: entries.length > limit,
+    episodes: entries.slice(0, limit).map((e) => ({
+      videoId: e.id,
+      title: e.title ?? 'Untitled',
+      artists: [author ?? show],
+      durationSec: e.duration ?? undefined,
+      thumbnail: `https://i.ytimg.com/vi/${e.id}/hqdefault.jpg`,
+      show
+    }))
+  }
 }

@@ -6,6 +6,7 @@ import type {
   DownloadJob,
   LibraryTrack,
   SearchResults,
+  ShowDetails,
   SpotifyTrack,
   ToolStatus,
   TrackRef
@@ -103,7 +104,17 @@ const ref = (i: number, extra: Partial<TrackRef> = {}): TrackRef => ({
 export function makeSearch(q: string): SearchResults {
   seed = q.length * 31 + 3
   if (/^zzz|nothing/i.test(q))
-    return { query: q, songs: [], albums: [], artists: [], videos: [], source: 'ytmusic' }
+    return {
+      query: q,
+      songs: [],
+      albums: [],
+      artists: [],
+      videos: [],
+      podcasts: [],
+      episodes: [],
+      channels: [],
+      source: 'ytmusic'
+    }
   return {
     query: q,
     songs: Array.from({ length: 20 }, (_, i) => ref(i + 1)),
@@ -124,6 +135,44 @@ export function makeSearch(q: string): SearchResults {
     videos: Array.from({ length: 10 }, (_, i) =>
       ref(i + 100, { album: undefined, albumId: undefined })
     ),
+    podcasts: [
+      {
+        kind: 'podcast',
+        id: 'PLfakepodcast01',
+        title: 'The Example Show',
+        author: 'Example Host',
+        subtitle: 'Podcast',
+        thumbnail: coverSvg('Example Show', 5)
+      },
+      {
+        kind: 'podcast',
+        id: 'PLfakepodcast02',
+        title: 'Torah Talks With A Very Long Podcast Name',
+        author: 'Rabbi Example',
+        subtitle: 'Podcast',
+        thumbnail: coverSvg('Torah Talks', 2)
+      }
+    ],
+    episodes: Array.from({ length: 4 }, (_, i) => makeEpisode(i, 'The Example Show')),
+    channels: [
+      {
+        kind: 'channel',
+        id: 'UCfakechannel001',
+        // Named exactly like the query, with a big audience: should become the top result.
+        title: q.replace(/\b\w/g, (c) => c.toUpperCase()),
+        author: '@example',
+        subtitle: '@example • 6.96M subscribers',
+        thumbnail: coverSvg('Channel', 3)
+      },
+      {
+        kind: 'channel',
+        id: 'UCfakechannel002',
+        title: 'Example Clips',
+        author: '@exampleclips',
+        subtitle: '@exampleclips • 12K subscribers',
+        thumbnail: coverSvg('Clips', 6)
+      }
+    ],
     source: /fallback/i.test(q) ? 'ytdlp' : 'ytmusic'
   }
 }
@@ -274,4 +323,36 @@ export function makeSpotifyTracks(n: number): SpotifyTrack[] {
       cover: coverSvg(album, i)
     }
   })
+}
+
+export function makeEpisode(i: number, show: string): TrackRef {
+  return {
+    videoId: `ep${String(i).padStart(9, '0')}`,
+    title:
+      i === 1
+        ? 'A Really Long Episode Title About Everything That Happened This Week, Explained In Detail'
+        : `Episode ${300 - i}: ${pick(WORDS)} and ${pick(WORDS)}`,
+    artists: [show],
+    durationSec: i % 5 === 3 ? undefined : 1200 + i * 431,
+    thumbnail: coverSvg(`Ep ${300 - i}`, i),
+    show
+  }
+}
+
+export function makeShow(kind: 'podcast' | 'channel', id: string, limit: number): ShowDetails {
+  const title = kind === 'podcast' ? 'The Example Show' : 'Example Channel'
+  const total = kind === 'podcast' ? 260 : null
+  const count = Math.min(limit, 260)
+  return {
+    kind,
+    id,
+    title,
+    author: kind === 'podcast' ? 'Example Host' : '@example',
+    subtitle: kind === 'podcast' ? 'Podcast' : 'Channel',
+    description: 'A fake show for the preview.\nNew episodes every weekday.',
+    thumbnail: coverSvg(title, kind === 'podcast' ? 5 : 3),
+    total,
+    hasMore: limit < 260,
+    episodes: Array.from({ length: count }, (_, i) => makeEpisode(i, title))
+  }
 }

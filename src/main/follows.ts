@@ -1,11 +1,12 @@
 import { Notification } from 'electron'
-import type { ArtistRef, FollowCheckResult, TrackRef } from '../shared/types'
+import type { ArtistRef, FollowCheckResult, FollowedShow, ShowRef, TrackRef } from '../shared/types'
 import { libraryDb } from './library/library'
 import * as yt from './youtube/search'
 import { enqueue } from './downloads/queue'
 import { getSettings } from './settings'
 import { emit } from './events'
-import { splitNewReleases } from './follow-filter'
+import { splitNewEpisodes, splitNewReleases } from './follow-filter'
+import { loadShow } from './youtube/ytdlp-json'
 import log from './log'
 
 const HOUR = 60 * 60 * 1000
@@ -70,6 +71,44 @@ async function checkOne(
     log.info(`${fresh.length} new release(s) from ${name}: ${fresh.map((a) => a.title).join(', ')}`)
 }
 
+export function listFollowedShows(): ReturnType<ReturnType<typeof libraryDb>['followedShows']> {
+  return libraryDb().followedShows()
+}
+
+/** Follow a podcast or channel. Current episodes are marked seen; only new ones download. */
+export async function followShow(show: ShowRef): Promise<void> {
+  const details = await loadShow(show.kind, show.id, 50)
+  libraryDb().followShow(
+    show.kind,
+    show.id,
+    details.title || show.title,
+    show.thumbnail ?? details.thumbnail ?? null,
+    details.episodes.map((e) => e.videoId)
+  )
+  emit('follows:changed', null)
+}
+
+export function unfollowShow(id: string): void {
+  libraryDb().unfollowShow(id)
+  emit('follows:changed', null)
+}
+
+async function checkShow(show: FollowedShow, result: FollowCheckResult): Promise<void> {
+  const db = libraryDb()
+  const details = await loadShow(show.kind, show.id, 30)
+  const { fresh, skipped } = splitNewEpisodes(details.episodes, db.seenEpisodes(show.id))
+  if (fresh.length && getSettings().autoDownloadFollowed)
+    enqueue(fresh, `New from ${details.title}`)
+  db.markEpisodesSeen(
+    show.id,
+    [...fresh, ...skipped].map((e) => e.videoId)
+  )
+  db.markShowChecked(show.id, fresh.length > 0)
+  result.releases += fresh.length
+  result.tracks += fresh.length
+  if (fresh.length) log.info(`${fresh.length} new episode(s) of ${details.title}`)
+}
+
 /** Look for new albums/singles from every followed artist and queue them. */
 export function checkFollowed(): Promise<FollowCheckResult> {
   if (checking) return checking
@@ -81,6 +120,14 @@ export function checkFollowed(): Promise<FollowCheckResult> {
       } catch (err) {
         log.warn(`Could not check ${a.name} for new releases`, err)
         result.errors.push(a.name)
+      }
+    }
+    for (const show of libraryDb().followedShows()) {
+      try {
+        await checkShow(show, result)
+      } catch (err) {
+        log.warn(`Could not check ${show.title} for new episodes`, err)
+        result.errors.push(show.title)
       }
     }
     emit('follows:changed', null)
@@ -100,9 +147,10 @@ export function checkFollowed(): Promise<FollowCheckResult> {
 export function startFollowChecks(): void {
   const tick = (): void => {
     const hours = Math.max(1, getSettings().followCheckHours)
-    const due = libraryDb()
-      .followedArtists()
-      .some((a) => !a.lastChecked || Date.now() - a.lastChecked > hours * HOUR)
+    const db = libraryDb()
+    const due = [...db.followedArtists(), ...db.followedShows()].some(
+      (a) => !a.lastChecked || Date.now() - a.lastChecked > hours * HOUR
+    )
     if (due) void checkFollowed()
   }
   setTimeout(tick, 30_000)

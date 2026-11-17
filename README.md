@@ -11,6 +11,9 @@ Built with Electron + React (renderer) and Node (main process).
 - **Stream before downloading**: play any result immediately, with seeking.
 - **Download** single songs, whole albums or an artist's discography as MP3 320, M4A or Opus. Files are tagged (title, artist, album, track number, year, square cover art) and filed as `Artist/Album/NN - Title.ext`.
 - **Download queue**: concurrent, retries automatically, cancel/retry per item, survives restarts.
+- **Podcasts and channels**: find podcasts and YouTube channels in search, browse their episodes
+  (newest first), play or download them (saved under `Podcasts/<show>/<date> - <title>`), and **Follow**
+  them to download new episodes automatically.
 - **Library**: scans and watches your folders, songs/albums/artists views, tag editing, playlists (export `.m3u8`).
 - **Player**: queue with drag-to-reorder, shuffle/repeat, media keys and OS media controls, remembers where you left off.
 - **Spotify import**: paste a playlist, album or song link (or pick from your playlists and Liked Songs),
