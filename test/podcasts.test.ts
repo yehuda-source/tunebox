@@ -92,3 +92,15 @@ describe('top result', () => {
     })
   })
 })
+
+describe('isListedEpisode', () => {
+  it('skips private and deleted placeholders, including ones with no title', async () => {
+    const { isListedEpisode } = await import('../src/main/youtube/entries')
+    expect(isListedEpisode({ id: 'a', title: 'The 2028 Race Is Already Here' })).toBe(true)
+    expect(isListedEpisode({ id: '2DTVpXAT7Pg', title: null })).toBe(false)
+    expect(isListedEpisode({ id: 'b', title: '  ' })).toBe(false)
+    expect(isListedEpisode({ id: 'c', title: '[Private video]' })).toBe(false)
+    expect(isListedEpisode({ id: 'd', title: '[Deleted video]' })).toBe(false)
+    expect(isListedEpisode({ id: null, title: 'x' })).toBe(false)
+  })
+})

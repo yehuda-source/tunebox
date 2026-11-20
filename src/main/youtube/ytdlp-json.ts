@@ -1,6 +1,7 @@
 import type { ShowDetails, ShowKind, TrackRef } from '../../shared/types'
 import { ytdlpCommand } from '../binaries/manager'
 import { run } from '../proc'
+import { isListedEpisode } from './entries'
 
 interface YtdlpEntry {
   description?: string
@@ -96,14 +97,15 @@ export async function loadShow(kind: ShowKind, id: string, limit = 100): Promise
     kind === 'podcast'
       ? `https://www.youtube.com/playlist?list=${id}`
       : `https://www.youtube.com/channel/${id}/videos`
-  // Ask for one extra to know whether there's more.
-  const data = await ytdlpJson(url, true, ['--playlist-end', String(limit + 1)])
+  // Shows often hold many private placeholders (17 of the latest 100 for one big podcast), which
+  // are skipped below. Fetch extra so a page still fills up, plus one to know if there's more.
+  const fetchCount = Math.ceil(limit * 1.5) + 1
+  const data = await ytdlpJson(url, true, ['--playlist-end', String(fetchCount)])
+  const raw = data.entries ?? []
   const author = (data.channel ?? data.uploader ?? '').replace(/ - Topic$/, '') || undefined
   const title = (data.title ?? '').replace(/ - Videos$/, '') || author || 'Untitled'
   const show = kind === 'podcast' ? title : (author ?? title)
-  const entries = (data.entries ?? []).filter(
-    (e) => e.id && e.title !== '[Private video]' && e.title !== '[Deleted video]'
-  )
+  const entries = raw.filter(isListedEpisode)
   const thumbs = data.thumbnails ?? []
   return {
     kind,
@@ -114,7 +116,8 @@ export async function loadShow(kind: ShowKind, id: string, limit = 100): Promise
     description: data.description || undefined,
     thumbnail: [...thumbs].sort((a, b) => (b.width ?? 0) - (a.width ?? 0))[0]?.url,
     total: kind === 'podcast' ? (data.playlist_count ?? null) : null,
-    hasMore: entries.length > limit,
+    // More if there are listed episodes past this page, or the fetch was cut off at its limit.
+    hasMore: entries.length > limit || raw.length >= fetchCount,
     episodes: entries.slice(0, limit).map((e) => ({
       videoId: e.id,
       title: e.title ?? 'Untitled',

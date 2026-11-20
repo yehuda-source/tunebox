@@ -57,7 +57,10 @@ Checks: `npm run typecheck`, `npm run lint`, `npm test`.
 | `notrash` | the music drive has no trash folder |
 | `spotify-setup` / `spotify-signin` | Spotify import before setup / before sign-in |
 
-Add `&theme=light` for the light theme. The same fake backend drives the UI tests in `test/ui`
+Add `&theme=light` for the light theme.
+
+To drive the real app (with real YouTube), start it with `npx electron-vite dev -w --remoteDebuggingPort 9333`
+and use `node scripts/cdp.mjs 9333 eval "<js>"` or `node scripts/cdp.mjs 9333 shot out.png`. The same fake backend drives the UI tests in `test/ui`
 (Vitest + Testing Library in jsdom), which run as part of `npm test`.
 
 ## Building
