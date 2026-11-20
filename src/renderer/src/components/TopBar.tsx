@@ -1,10 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
-import { ChevronLeft, ChevronRight, Search, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Clock, Search, X } from 'lucide-react'
 import { useNav, go } from '../store/nav'
 import { useApp } from '../store/app'
 import { downloadUrl } from '../store/downloads'
 import { IconButton } from './ui'
 import { cn } from '../lib/format'
+import {
+  useRecentSearches,
+  matchRecent,
+  removeRecentSearch,
+  clearRecentSearches
+} from '../store/recentSearches'
 
 export function TopBar(): React.JSX.Element {
   const { route, index, stack, back, forward } = useNav()
@@ -13,6 +19,8 @@ export function TopBar(): React.JSX.Element {
   const [open, setOpen] = useState(false)
   const [sel, setSel] = useState(-1)
   const input = useRef<HTMLInputElement>(null)
+  // Closing on blur is delayed so clicks in the dropdown land; refocusing must cancel it.
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Follow the route when navigating to a different search.
   const [prevRoute, setPrevRoute] = useState(route)
@@ -29,7 +37,18 @@ export function TopBar(): React.JSX.Element {
     }, 180)
     return () => clearTimeout(t)
   }, [q, wantSuggestions])
-  const shown = wantSuggestions ? suggestions.list : []
+  const recentAll = useRecentSearches((st) => st.list)
+  // Matching recent searches first, then YouTube's suggestions (without repeats).
+  const recent = matchRecent(recentAll, q, q.trim() ? 4 : 8)
+  const seen = new Set(recent.map((r) => r.toLowerCase()))
+  const suggested = (wantSuggestions ? suggestions.list : [])
+    .filter((x) => !seen.has(x.toLowerCase()))
+    .slice(0, Math.max(0, 8 - recent.length))
+  const items: { text: string; recent: boolean }[] = [
+    ...recent.map((text) => ({ text, recent: true })),
+    ...suggested.map((text) => ({ text, recent: false }))
+  ]
+  const shown = items.map((i) => i.text)
 
   const submit = (value: string): void => {
     const v = value.trim()
@@ -67,8 +86,13 @@ export function TopBar(): React.JSX.Element {
             setOpen(true)
             setSel(-1)
           }}
-          onFocus={() => setOpen(true)}
-          onBlur={() => setTimeout(() => setOpen(false), 120)}
+          onFocus={() => {
+            if (closeTimer.current) clearTimeout(closeTimer.current)
+            setOpen(true)
+          }}
+          onBlur={() => {
+            closeTimer.current = setTimeout(() => setOpen(false), 120)
+          }}
           onKeyDown={(e) => {
             if (e.key === 'ArrowDown') {
               e.preventDefault()
@@ -95,24 +119,61 @@ export function TopBar(): React.JSX.Element {
             <X className="h-4 w-4" />
           </button>
         )}
-        {open && shown.length > 0 && (
+        {open && items.length > 0 && (
           <div className="absolute left-0 right-0 top-12 z-30 overflow-hidden rounded-xl border border-line bg-panel p-1 shadow-2xl">
-            {shown.map((s, i) => (
-              <button
-                key={s}
+            {!q.trim() && (
+              <div className="flex items-center justify-between px-3 pb-1 pt-2">
+                <span className="text-xs font-semibold uppercase tracking-wider text-faint">
+                  Recent searches
+                </span>
+                <button
+                  className="text-xs text-muted hover:text-fg"
+                  onMouseDown={(e) => {
+                    e.preventDefault()
+                    clearRecentSearches()
+                  }}
+                >
+                  Clear
+                </button>
+              </div>
+            )}
+            {items.map((item, i) => (
+              <div
+                key={`${item.recent ? 'r' : 's'}:${item.text}`}
+                role="option"
+                aria-selected={i === sel}
                 onMouseDown={(e) => {
                   e.preventDefault()
-                  setQ(s)
-                  submit(s)
+                  setQ(item.text)
+                  submit(item.text)
                 }}
                 className={cn(
-                  'flex h-9 w-full items-center gap-3 rounded-lg px-3 text-left text-[14px]',
+                  'group flex h-9 w-full cursor-default items-center gap-3 rounded-lg px-3 text-left text-[14px]',
                   i === sel ? 'bg-hover' : 'hover:bg-hover'
                 )}
               >
-                <Search className="h-3.5 w-3.5 text-faint" />
-                {s}
-              </button>
+                {item.recent ? (
+                  <Clock className="h-3.5 w-3.5 shrink-0 text-faint" />
+                ) : (
+                  <Search className="h-3.5 w-3.5 shrink-0 text-faint" />
+                )}
+                <span className="min-w-0 flex-1 truncate">{item.text}</span>
+                {item.recent && (
+                  <button
+                    aria-label={`Remove “${item.text}” from recent searches`}
+                    title="Remove"
+                    className="rounded-full p-0.5 text-faint opacity-0 hover:text-fg group-hover:opacity-100"
+                    onMouseDown={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      removeRecentSearch(item.text)
+                      setSel(-1)
+                    }}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
             ))}
           </div>
         )}

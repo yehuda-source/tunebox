@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Play, ChevronDown } from 'lucide-react'
+import { Play, ChevronDown, Download } from 'lucide-react'
 import type { ShowKind } from '@shared/types'
 import { useCached } from '../lib/useCached'
 import { TrackList } from '../components/TrackList'
@@ -7,6 +7,8 @@ import { ShowFollowButton } from '../components/ShowFollowButton'
 import { Button, Cover, Skeleton, Spinner, Empty } from '../components/ui'
 import { Page, ListSkeleton, ErrorState } from './common'
 import { player, fromRef } from '../store/player'
+import { download } from '../store/downloads'
+import { DropdownMenu } from '../components/menus'
 
 const PAGE = 100
 
@@ -76,6 +78,44 @@ export function ShowView({ kind, id }: { kind: ShowKind; id: string }): React.JS
                 >
                   Play latest
                 </Button>
+                <DropdownMenu
+                  actions={() => {
+                    const eps = shown.episodes
+                    const batch = shown.title
+                    const plural = (n: number): string => `${n} episode${n === 1 ? '' : 's'}`
+                    return [
+                      {
+                        label: 'Latest episode',
+                        onSelect: () => void download(eps.slice(0, 1), batch)
+                      },
+                      ...(eps.length > 1
+                        ? [
+                            {
+                              label: `Latest ${plural(Math.min(10, eps.length))}`,
+                              onSelect: () => void download(eps.slice(0, 10), batch)
+                            }
+                          ]
+                        : []),
+                      ...(eps.length > 10
+                        ? [
+                            {
+                              label: `All ${plural(eps.length)} shown`,
+                              onSelect: () => void download(eps, batch)
+                            }
+                          ]
+                        : [])
+                    ]
+                  }}
+                >
+                  <Button
+                    size="lg"
+                    disabled={!shown.episodes.length}
+                    icon={<Download className="h-4 w-4" />}
+                  >
+                    Download
+                    <ChevronDown className="-mr-1 h-4 w-4" />
+                  </Button>
+                </DropdownMenu>
                 <ShowFollowButton
                   show={{
                     kind,
