@@ -1,5 +1,16 @@
 apply plugin: 'com.android.application'
 
+import groovy.json.JsonSlurper
+
+// The app version comes from package.json, like the desktop app.
+def appVersion = new JsonSlurper().parse(file('../../package.json')).version
+def (vMajor, vMinor, vPatch) = appVersion.tokenize('.-')*.toInteger()
+
+// Release signing: a keystore from the environment (CI secrets), so every release has the same
+// signature and installs over the previous one. Without it, release builds use the debug key.
+def releaseKeystore = System.getenv('TUNEBOX_KEYSTORE')
+def releaseBuild = gradle.startParameter.taskNames.any { it.toLowerCase().contains('release') }
+
 android {
     namespace = "com.tunebox.app"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -7,11 +18,12 @@ android {
         applicationId "com.tunebox.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode vMajor * 10000 + vMinor * 100 + vPatch
+        versionName appVersion
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         // youtubedl-android ships Python/QuickJS/ffmpeg per CPU type (phones: arm, emulator: x86).
-        ndk { abiFilters 'x86', 'x86_64', 'armeabi-v7a', 'arm64-v8a' }
+        // Debug builds are one APK for all of them; release builds are split (below).
+        if (!releaseBuild) ndk { abiFilters 'x86', 'x86_64', 'armeabi-v7a', 'arm64-v8a' }
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
              // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
@@ -20,8 +32,28 @@ android {
     }
     // yt-dlp runs Python and QuickJS as programs, so native libraries must be unpacked on install.
     packaging { jniLibs { useLegacyPackaging = true } }
+    // One APK per CPU type: yt-dlp's Python, QuickJS and ffmpeg are large native libraries.
+    splits {
+        abi {
+            enable releaseBuild
+            reset()
+            include 'arm64-v8a', 'armeabi-v7a', 'x86_64'
+            universalApk false
+        }
+    }
+    signingConfigs {
+        release {
+            if (releaseKeystore) {
+                storeFile file(releaseKeystore)
+                storePassword System.getenv('TUNEBOX_KEYSTORE_PASSWORD')
+                keyAlias System.getenv('TUNEBOX_KEY_ALIAS') ?: 'tunebox'
+                keyPassword System.getenv('TUNEBOX_KEY_PASSWORD') ?: System.getenv('TUNEBOX_KEYSTORE_PASSWORD')
+            }
+        }
+    }
     buildTypes {
         release {
+            signingConfig releaseKeystore ? signingConfigs.release : signingConfigs.debug
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

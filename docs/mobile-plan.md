@@ -14,9 +14,17 @@ emulator; build iOS on GitHub Actions (no Mac); **core features first**.
   solved). In the app: YouTube Music search 1.3 s; yt-dlp self-updated 2025.11.12 → 2026.10.26 in 3 s;
   full song download (4.58 MB, 4:43 AAC 128k) in 20 s. YouTube Music code moved to
   `src/shared/ytmusic.ts` (desktop wires logger + yt-dlp fallback in `src/main/youtube/search.ts`).
-- Next for Android: phone layout (bottom tabs, compact player), library DB (SQLite plugin),
-  download queue, local/stream playback through a small local media server, playlists, background
-  audio with lock-screen controls, split release APKs + GitHub Actions job.
+- 2026-11-21: **Android core done** and checked in the emulator: phone layout (bottom tabs, mini
+  player, full-screen player, queue sheet, back button), library in a JSON file (no SQLite needed),
+  download queue (tags + cover via the bundled ffmpeg, album downloads, retries, alternative
+  uploads), playlists, streaming, podcasts/channels pages, and native Media3 playback: lock screen,
+  notification, headset, screen off, auto-advance in the background. Release APKs per CPU type
+  (54–63 MB) and a GitHub Actions job.
+- Known limits: starting a stream that isn't downloaded takes ~12 s on the emulator (yt-dlp
+  queries several YouTube clients and solves their JS challenges in QuickJS; no single client
+  works alone any more). The next track in a queue is resolved ahead of time. Downloads run while
+  the app is open or playing; there's no separate background-download service yet.
+- Later on Android: follows with auto-download, Spotify import, a download foreground service.
 - Tooling: SDK in ~/Android/Sdk, AVD "tunebox" (Pixel 8, Android 16). Start with
   `scripts/android-emulator.sh` (guest GPU, Vulkan off: the default renderer segfaults). Inspect the
   app's WebView: `adb forward tcp:9230 localabstract:webview_devtools_remote_$(adb shell pidof com.tunebox.app)`

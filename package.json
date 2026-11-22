@@ -25,7 +25,8 @@
     "preview:web": "vite --config vite.preview.config.ts",
     "build:win:zip": "node scripts/fetch-binaries.mjs win && electron-vite build && electron-builder --win zip -c.win.signAndEditExecutable=false",
     "build:mobile": "vite build --config vite.mobile.config.ts && cap sync",
-    "android:apk": "npm run build:mobile && cd android && ./gradlew assembleDebug"
+    "android:apk": "npm run build:mobile && cd android && ./gradlew assembleDebug",
+    "android:release": "npm run build:mobile && cd android && ./gradlew assembleRelease"
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.2",

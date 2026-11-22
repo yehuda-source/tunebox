@@ -2,6 +2,7 @@
 
 Search YouTube Music, play anything instantly, and download it into a tagged local library.
 Runs on Windows and Linux as a self-contained app (`.exe` / `.AppImage`); no browser or system tools needed.
+There is also an Android app (`.apk`) with its own library on the phone.
 
 Built with Electron + React (renderer) and Node (main process).
 
@@ -72,10 +73,35 @@ npm run build:win     # dist/TuneBox-<version>-setup.exe and -portable.exe
 
 Each build script downloads the right binaries for the target first.
 
+### Android
+
+The phone app is the same React UI in a [Capacitor](https://capacitorjs.com) shell
+(`android/`, entry `src/renderer/mobile.html`). Its backend (`src/renderer/src/mobile`) implements
+the same `window.api` on top of native plugins in `android/app/src/main/java/com/tunebox/app`:
+yt-dlp with Python, QuickJS and ffmpeg ([youtubedl-android](https://github.com/JunkFood02/youtubedl-android)),
+file operations, and a Media3 player for background playback with lock-screen controls.
+yt-dlp updates itself on the phone, so the app keeps working without reinstalling.
+
+Needs the Android SDK and JDK 21. With the SDK in `~/Android/Sdk`:
+
+```bash
+npm run android:apk        # debug APK for every CPU type (android/app/build/outputs/apk/debug)
+npm run android:release    # one APK per CPU type (…/apk/release)
+scripts/android-emulator.sh   # start the "tunebox" emulator
+scripts/android-run.sh        # build, install, start; DevTools on localhost:9230
+```
+
+Release APKs are signed with the keystore in `TUNEBOX_KEYSTORE` (password in
+`TUNEBOX_KEYSTORE_PASSWORD`); without it they use the debug key. In GitHub Actions the keystore
+comes from the `ANDROID_KEYSTORE_BASE64` and `ANDROID_KEYSTORE_PASSWORD` secrets.
+
+`npx electron scripts/phone-shot.mjs out.png` screenshots the browser preview at phone size
+(open it with `?phone` to get the phone layout in a normal browser).
+
 ### Releases
 
 Bump the version, then push a matching tag. GitHub Actions builds Windows (installer + portable
-`.exe`) and Linux (`.AppImage`) and publishes them as a GitHub Release:
+`.exe`), Linux (`.AppImage`) and Android (`.apk` per CPU type) and publishes them as a GitHub Release:
 
 ```bash
 npm version 1.2.3 && git push && git push --tags
@@ -92,8 +118,9 @@ uses Electron's default icon; the installer needs Wine or the GitHub Actions bui
 ```
 src/main/        Node backend: tools manager, YouTube search/stream, download queue, library (node:sqlite)
 src/preload/     contextBridge: exposes the typed window.api
-src/shared/      types shared by both sides
-src/renderer/    React UI (Tailwind, Zustand, Radix)
-scripts/         fetch-binaries.mjs
+src/shared/      types and logic shared by the desktop backend and the phone app
+src/renderer/    React UI (Tailwind, Zustand, Radix); src/renderer/src/mobile is the phone backend
+android/         Android project (Capacitor) with the native plugins
+scripts/         fetch-binaries.mjs, emulator/test helpers
 test/            vitest unit tests; test/ui renders the app against the fake backend
 ```
