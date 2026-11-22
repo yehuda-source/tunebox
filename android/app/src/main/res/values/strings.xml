@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">TuneBox</string>
+    <string name="title_activity_main">TuneBox</string>
+    <string name="package_name">com.tunebox.app</string>
+    <string name="custom_url_scheme">com.tunebox.app</string>
+</resources>

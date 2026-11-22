@@ -23,7 +23,9 @@
     "test": "vitest run",
     "fetch-binaries": "node scripts/fetch-binaries.mjs",
     "preview:web": "vite --config vite.preview.config.ts",
-    "build:win:zip": "node scripts/fetch-binaries.mjs win && electron-vite build && electron-builder --win zip -c.win.signAndEditExecutable=false"
+    "build:win:zip": "node scripts/fetch-binaries.mjs win && electron-vite build && electron-builder --win zip -c.win.signAndEditExecutable=false",
+    "build:mobile": "vite build --config vite.mobile.config.ts && cap sync",
+    "android:apk": "npm run build:mobile && cd android && ./gradlew assembleDebug"
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.2",
@@ -34,6 +36,12 @@
     "youtubei.js": "^18.3.0"
   },
   "devDependencies": {
+    "@capacitor-community/sqlite": "^8.1.1",
+    "@capacitor/android": "^8.6.2",
+    "@capacitor/app": "^8.1.2",
+    "@capacitor/cli": "^8.6.2",
+    "@capacitor/core": "^8.6.2",
+    "@capacitor/filesystem": "^8.1.5",
     "@electron-toolkit/eslint-config-prettier": "^3.0.1",
     "@electron-toolkit/eslint-config-ts": "^4.0.0",
     "@electron-toolkit/tsconfig": "^2.0.0",
