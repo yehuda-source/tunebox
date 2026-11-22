@@ -8,7 +8,7 @@ function Item({ t }: { t: Toast }): React.JSX.Element {
   const [open, setOpen] = useState(t.kind !== 'error')
   const Icon = t.kind === 'success' ? CheckCircle2 : t.kind === 'error' ? AlertTriangle : Info
   return (
-    <div className="pointer-events-auto flex w-[360px] gap-3 rounded-xl border border-line bg-panel/95 p-3.5 shadow-2xl backdrop-blur">
+    <div className="pointer-events-auto flex w-[360px] max-w-full gap-3 rounded-xl border border-line bg-panel/95 p-3.5 shadow-2xl backdrop-blur">
       <Icon
         className={cn(
           'mt-0.5 h-5 w-5 shrink-0',
@@ -45,7 +45,7 @@ function Item({ t }: { t: Toast }): React.JSX.Element {
 export function Toaster(): React.JSX.Element {
   const toasts = useToasts((s) => s.toasts)
   return (
-    <div className="pointer-events-none fixed bottom-28 right-5 z-50 flex flex-col gap-2">
+    <div className="pointer-events-none fixed bottom-28 right-5 z-50 flex flex-col gap-2 max-sm:bottom-36 max-sm:left-3 max-sm:right-3 max-sm:items-center">
       {toasts.map((t) => (
         <Item key={t.id} t={t} />
       ))}

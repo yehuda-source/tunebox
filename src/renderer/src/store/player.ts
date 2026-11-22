@@ -3,6 +3,7 @@ import type { LibraryTrack, TrackRef } from '@shared/types'
 import { coverUrl, findLocal } from './library'
 import { toast } from './toast'
 import { pickShuffle } from './shuffle'
+import { platform } from '../lib/platform'
 
 export interface PlayItem {
   key: string
@@ -34,7 +35,7 @@ interface PlayerState {
 }
 
 const STORAGE_KEY = 'tunebox.player'
-const audio = new Audio()
+const audio = platform.createAudio?.() ?? new Audio()
 audio.preload = 'auto'
 if (import.meta.env.DEV) Object.assign(window, { __audio: audio })
 
@@ -122,9 +123,9 @@ async function load(i: number, autoplay = true, startAt = 0): Promise<void> {
   set({ index: i, position: startAt, duration: item.durationSec ?? 0, loading: true })
   loadedKey = item.key
   played.add(item.key)
+  updateMediaSession(item)
   audio.src = item.src
   if (startAt) audio.currentTime = startAt
-  updateMediaSession(item)
   if (autoplay) {
     try {
       await audio.play()
@@ -139,8 +140,7 @@ async function load(i: number, autoplay = true, startAt = 0): Promise<void> {
 
 function prefetchNext(): void {
   const next = get().queue[get().index + 1]
-  if (next?.src.startsWith('tunebox-media://stream/') && next.videoId)
-    void window.api.search.prefetch(next.videoId)
+  if (next?.key.startsWith('yt:') && next.videoId) void window.api.search.prefetch(next.videoId)
 }
 
 export const player = {
@@ -367,6 +367,7 @@ setInterval(() => {
 // ---------- OS media controls (MPRIS on Linux, SMTC on Windows) ----------
 
 function updateMediaSession(item: PlayItem): void {
+  platform.nowPlaying?.(item)
   if (!('mediaSession' in navigator)) return
   navigator.mediaSession.metadata = new MediaMetadata({
     title: item.title,

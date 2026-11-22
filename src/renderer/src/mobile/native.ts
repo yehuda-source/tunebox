@@ -24,3 +24,67 @@ export interface YtdlpPlugin {
 }
 
 export const Ytdlp = registerPlugin<YtdlpPlugin>('Ytdlp')
+
+export interface FilesPlugin {
+  dirs(): Promise<{ files: string; cache: string; external: string }>
+  /** `text` is null when the file doesn't exist. */
+  readText(o: { path: string }): Promise<{ text: string | null }>
+  /** Atomic (temporary file + rename). */
+  writeText(o: { path: string; text: string }): Promise<void>
+  stat(o: { path: string }): Promise<{ exists: boolean; size: number; dir: boolean }>
+  existing(o: { paths: string[] }): Promise<{ paths: string[] }>
+  list(o: { path: string }): Promise<{ names: string[] }>
+  mkdirs(o: { path: string }): Promise<void>
+  move(o: { from: string; to: string }): Promise<void>
+  /** Deletes a file or folder; with `pruneUpTo`, also folders left empty below that root. */
+  remove(o: { path: string; pruneUpTo?: string }): Promise<void>
+  download(o: { url: string; path: string }): Promise<{ size: number }>
+  ffmpeg(o: { args: string[] }): Promise<{ exitCode: number; out: string }>
+}
+
+export const Files = registerPlugin<FilesPlugin>('Files')
+
+export interface PlayerState {
+  position: number
+  duration: number
+  playing: boolean
+  playWhenReady: boolean
+  buffering: boolean
+  ready: boolean
+  ended: boolean
+}
+
+export interface PlayerPlugin {
+  load(o: {
+    url: string
+    key?: string
+    title?: string
+    artist?: string
+    album?: string
+    artwork?: string
+    userAgent?: string
+    startAt?: number
+    autoplay?: boolean
+  }): Promise<void>
+  play(): Promise<void>
+  pause(): Promise<void>
+  seek(o: { position: number }): Promise<void>
+  setVolume(o: { volume: number }): Promise<void>
+  stop(): Promise<void>
+  getState(): Promise<PlayerState>
+  addListener(event: 'state', cb: (s: PlayerState) => void): Promise<PluginListenerHandle>
+  addListener(
+    event: 'time',
+    cb: (t: { position: number; duration: number }) => void
+  ): Promise<PluginListenerHandle>
+  addListener(
+    event: 'error',
+    cb: (e: { message: string; code: number }) => void
+  ): Promise<PluginListenerHandle>
+  addListener(
+    event: 'command',
+    cb: (e: { command: 'next' | 'prev' }) => void
+  ): Promise<PluginListenerHandle>
+}
+
+export const NativePlayer = registerPlugin<PlayerPlugin>('Player')

@@ -1,8 +1,11 @@
 // Installs the mock API and maps tunebox-media:// URLs to things a plain browser can load.
 import { mockApi } from './api'
 import { coverSvg } from './fixtures'
+import { enablePhoneLayout } from '../lib/platform'
 
 Object.assign(window, { api: mockApi })
+// ?phone shows the phone layout (open the preview in a phone-sized viewport).
+if (new URLSearchParams(location.search).has('phone')) enablePhoneLayout()
 
 // A short silent WAV so the player can actually "play" library tracks and streams.
 function silentWav(seconds: number): string {

@@ -33,13 +33,20 @@ export function LibAlbumView({
 
   return (
     <Page>
-      <div className="flex items-end gap-8 pb-8 pt-4">
-        <Cover src={coverUrl(group.coverId)} size={224} rounded="lg" className="shadow-2xl" />
+      <div className="flex items-end gap-8 pb-8 pt-4 max-sm:flex-col max-sm:items-start max-sm:gap-5 max-sm:pb-6">
+        <Cover
+          src={coverUrl(group.coverId)}
+          size={224}
+          rounded="lg"
+          className="shadow-2xl max-sm:h-44! max-sm:w-44!"
+        />
         <div className="min-w-0 flex-1">
           <div className="text-[13px] font-semibold uppercase tracking-wider text-muted">
             Album · In your library
           </div>
-          <h1 className="mt-2 line-clamp-2 text-5xl font-black tracking-tight">{group.album}</h1>
+          <h1 className="mt-2 line-clamp-2 text-5xl font-black tracking-tight max-sm:text-3xl">
+            {group.album}
+          </h1>
           <div className="mt-4 flex flex-wrap gap-x-2 text-muted">
             <button
               className="font-semibold text-fg hover:underline"
@@ -52,7 +59,7 @@ export function LibAlbumView({
               • {group.tracks.length} songs, {totalDuration(group.tracks.map((t) => t.durationSec))}
             </span>
           </div>
-          <div className="mt-6 flex gap-3">
+          <div className="mt-6 flex flex-wrap gap-3">
             <Button
               variant="primary"
               size="lg"

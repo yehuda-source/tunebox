@@ -35,10 +35,16 @@ export function ShowView({ kind, id }: { kind: ShowKind; id: string }): React.JS
   const round = kind === 'channel'
   return (
     <Page>
-      <div className="flex items-end gap-8 pb-8 pt-4">
+      <div className="flex items-end gap-8 pb-8 pt-4 max-sm:flex-col max-sm:items-start max-sm:gap-5 max-sm:pb-6">
         {!shown ? (
           <>
-            <Skeleton className={round ? 'h-48 w-48 rounded-full' : 'h-48 w-48 rounded-xl'} />
+            <Skeleton
+              className={
+                round
+                  ? 'h-48 w-48 rounded-full max-sm:h-44 max-sm:w-44'
+                  : 'h-48 w-48 rounded-xl max-sm:h-44 max-sm:w-44'
+              }
+            />
             <div className="flex flex-1 flex-col gap-3">
               <Skeleton className="h-4 w-20" />
               <Skeleton className="h-12 w-2/3" />
@@ -51,13 +57,13 @@ export function ShowView({ kind, id }: { kind: ShowKind; id: string }): React.JS
               src={shown.thumbnail}
               size={192}
               rounded={round ? 'full' : 'lg'}
-              className="shadow-2xl"
+              className="shadow-2xl max-sm:h-44! max-sm:w-44!"
             />
             <div className="min-w-0 flex-1">
               <div className="text-[13px] font-semibold uppercase tracking-wider text-muted">
                 {round ? 'Channel' : 'Podcast'}
               </div>
-              <h1 className="mt-2 line-clamp-2 text-5xl font-black tracking-tight">
+              <h1 className="mt-2 line-clamp-2 text-5xl font-black tracking-tight max-sm:text-3xl">
                 {shown.title}
               </h1>
               <div className="mt-3 text-muted">

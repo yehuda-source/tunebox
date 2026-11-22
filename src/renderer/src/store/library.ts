@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { LibraryTrack, Playlist, TrackRef } from '@shared/types'
 import { SongIndex } from '@shared/songKey'
+import { platform } from '../lib/platform'
 
 interface LibraryState {
   tracks: LibraryTrack[]
@@ -80,7 +81,7 @@ export function groupAlbums(tracks: LibraryTrack[]): AlbumGroup[] {
 }
 
 export const coverUrl = (id: number | null | undefined): string | undefined =>
-  id == null ? undefined : `tunebox-media://cover/${id}`
+  id == null ? undefined : (platform.coverUrl?.(id) ?? `tunebox-media://cover/${id}`)
 
 /** The library copy of an online track: same video, or the same song from another album/upload. */
 export function findLocal(

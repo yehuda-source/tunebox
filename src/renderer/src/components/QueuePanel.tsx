@@ -4,6 +4,7 @@ import { usePlayer, player } from '../store/player'
 import { useApp } from '../store/app'
 import { Cover, IconButton, Eq } from './ui'
 import { duration, cn } from '../lib/format'
+import { platform } from '../lib/platform'
 
 export function QueuePanel(): React.JSX.Element | null {
   const open = useApp((s) => s.queueOpen)
@@ -34,12 +35,15 @@ export function QueuePanel(): React.JSX.Element | null {
         setDragOver(null)
       }}
       onDoubleClick={() => player.jump(i)}
+      onClick={platform.phone ? () => player.jump(i) : undefined}
       className={cn(
         'group flex h-14 items-center gap-2 rounded-lg px-2 hover:bg-hover',
         dragOver === i && dragFrom !== i && 'border-t-2 border-accent'
       )}
     >
-      <GripVertical className="h-4 w-4 shrink-0 cursor-grab text-faint opacity-0 group-hover:opacity-100" />
+      {!platform.phone && (
+        <GripVertical className="h-4 w-4 shrink-0 cursor-grab text-faint opacity-0 group-hover:opacity-100" />
+      )}
       <Cover src={it.cover} size={40} />
       <div className="min-w-0 flex-1">
         <div className={cn('truncate text-[13px] font-medium', i === index && 'text-accent')}>
@@ -47,14 +51,19 @@ export function QueuePanel(): React.JSX.Element | null {
         </div>
         <div className="truncate text-xs text-muted">{it.artist}</div>
       </div>
-      <span className="text-xs tabular-nums text-faint group-hover:hidden">
-        {duration(it.durationSec)}
-      </span>
+      {!platform.phone && (
+        <span className="text-xs tabular-nums text-faint group-hover:hidden">
+          {duration(it.durationSec)}
+        </span>
+      )}
       <IconButton
         label="Remove"
-        size={28}
-        className="hidden group-hover:inline-flex"
-        onClick={() => player.removeAt(i)}
+        size={platform.phone ? 40 : 28}
+        className={platform.phone ? undefined : 'hidden group-hover:inline-flex'}
+        onClick={(e) => {
+          e.stopPropagation()
+          player.removeAt(i)
+        }}
       >
         <X className="h-3.5 w-3.5" />
       </IconButton>
@@ -62,7 +71,13 @@ export function QueuePanel(): React.JSX.Element | null {
   )
 
   return (
-    <aside className="flex w-80 shrink-0 flex-col border-l border-line bg-panel">
+    <aside
+      className={
+        platform.phone
+          ? 'fixed inset-0 z-40 flex flex-col bg-panel pt-[env(safe-area-inset-top)]'
+          : 'flex w-80 shrink-0 flex-col border-l border-line bg-panel'
+      }
+    >
       <div className="flex h-16 items-center justify-between px-4">
         <h2 className="text-lg font-bold">Queue</h2>
         <div className="flex gap-1">

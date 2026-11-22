@@ -5,6 +5,7 @@ import { download } from '../store/downloads'
 import { dialogs } from '../store/dialogs'
 import { toast } from '../store/toast'
 import { go } from '../store/nav'
+import { platform } from '../lib/platform'
 
 export interface MenuAction {
   label: string
@@ -49,19 +50,28 @@ export function libraryActions(t: LibraryTrack, extra: MenuAction[] = []): MenuA
       onSelect: () => go({ name: 'libalbum', artist: t.albumArtist, album: t.album })
     },
     { label: 'Edit tags…', onSelect: () => void dialogs.editTags(t) },
-    { label: 'Show in folder', onSelect: () => void window.api.library.showInFolder(t.id) },
+    ...(platform.phone
+      ? []
+      : [{ label: 'Show in folder', onSelect: () => void window.api.library.showInFolder(t.id) }]),
     ...extra,
     { label: '', separator: true },
     {
-      label: 'Move to trash',
+      label: platform.phone ? 'Delete from phone' : 'Move to trash',
       danger: true,
       onSelect: async () => {
-        const ok = await dialogs.confirm(
-          'Move to trash?',
-          <>“{t.title}” will be moved to your system trash and removed from the library.</>,
-          'Move to trash',
-          true
-        )
+        const ok = platform.phone
+          ? await dialogs.confirm(
+              'Delete this song?',
+              <>“{t.title}” will be deleted from your phone. This can’t be undone.</>,
+              'Delete',
+              true
+            )
+          : await dialogs.confirm(
+              'Move to trash?',
+              <>“{t.title}” will be moved to your system trash and removed from the library.</>,
+              'Move to trash',
+              true
+            )
         if (ok)
           await window.api.library.remove(t.id).catch((err) => toast.error('Could not remove', err))
       }
@@ -76,9 +86,16 @@ export function refActions(t: TrackRef): MenuAction[] {
     { label: 'Play next', onSelect: () => player.playNext([fromRef(t)]) },
     { label: 'Add to queue', onSelect: () => player.addToQueue([fromRef(t)]) },
     { label: '', separator: true },
-    local
-      ? { label: 'Show in folder', onSelect: () => void window.api.library.showInFolder(local.id) }
-      : { label: 'Download', onSelect: () => void download([t]) },
+    ...(!local
+      ? [{ label: 'Download', onSelect: () => void download([t]) }]
+      : platform.phone
+        ? []
+        : [
+            {
+              label: 'Show in folder',
+              onSelect: () => void window.api.library.showInFolder(local.id)
+            }
+          ]),
     ...(local ? [{ label: 'Add to playlist', sub: playlistSub([local.id]) }] : []),
     ...(t.albumId
       ? [{ label: 'Go to album', onSelect: () => go({ name: 'album', id: t.albumId! }) }]

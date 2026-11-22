@@ -19,3 +19,7 @@ export function friendlyError(msg: string): string {
     return 'TuneBox can’t write to the download folder. Choose another folder in Settings.'
   return msg.replace(/^ERROR:\s*/, '').slice(0, 300)
 }
+
+/** yt-dlp errors that usually mean it is outdated (YouTube changed something). */
+export const OUTDATED_PATTERN =
+  /Signature extraction failed|nsig extraction failed|n challenge|Unable to extract|HTTP Error 403|Precondition check failed|Requested format is not available|Some formats may be missing|confirm you.re not a bot/i

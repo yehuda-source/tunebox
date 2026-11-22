@@ -5,6 +5,7 @@ import { useApp } from '../store/app'
 import { downloadUrl } from '../store/downloads'
 import { IconButton } from './ui'
 import { cn } from '../lib/format'
+import { platform } from '../lib/platform'
 import {
   useRecentSearches,
   matchRecent,
@@ -63,18 +64,33 @@ export function TopBar(): React.JSX.Element {
   }
 
   return (
-    <header className="flex h-16 shrink-0 items-center gap-3 px-6">
-      <IconButton label="Back (Alt+←)" onClick={back} disabled={index === 0} className="bg-elev">
-        <ChevronLeft className="h-5 w-5" />
-      </IconButton>
-      <IconButton
-        label="Forward (Alt+→)"
-        onClick={forward}
-        disabled={index >= stack.length - 1}
-        className="bg-elev"
-      >
-        <ChevronRight className="h-5 w-5" />
-      </IconButton>
+    <header
+      className={cn(
+        'flex shrink-0 items-center',
+        platform.phone ? 'h-14 gap-2 px-3' : 'h-16 gap-3 px-6'
+      )}
+    >
+      {(!platform.phone || index > 0) && (
+        <IconButton
+          label="Back (Alt+←)"
+          onClick={back}
+          disabled={index === 0}
+          size={platform.phone ? 40 : 32}
+          className="bg-elev"
+        >
+          <ChevronLeft className="h-5 w-5" />
+        </IconButton>
+      )}
+      {!platform.phone && (
+        <IconButton
+          label="Forward (Alt+→)"
+          onClick={forward}
+          disabled={index >= stack.length - 1}
+          className="bg-elev"
+        >
+          <ChevronRight className="h-5 w-5" />
+        </IconButton>
+      )}
       <div className="relative w-full max-w-xl">
         <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
         <input
@@ -103,7 +119,11 @@ export function TopBar(): React.JSX.Element {
             } else if (e.key === 'Enter') submit(sel >= 0 ? shown[sel] : q)
             else if (e.key === 'Escape') input.current?.blur()
           }}
-          placeholder="Search songs, albums, artists — or paste a YouTube link"
+          placeholder={
+            platform.phone
+              ? 'Search or paste a YouTube link'
+              : 'Search songs, albums, artists — or paste a YouTube link'
+          }
           className="h-11 w-full rounded-full border border-transparent bg-elev pl-11 pr-10 text-[14px] outline-none placeholder:text-faint focus:border-line focus:bg-panel"
           spellCheck={false}
         />
@@ -178,13 +198,15 @@ export function TopBar(): React.JSX.Element {
           </div>
         )}
       </div>
-      <button
-        onClick={() => useApp.setState({ paletteOpen: true })}
-        className="ml-auto flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-line px-3 text-[13px] text-muted hover:bg-hover hover:text-fg"
-        title="Command palette"
-      >
-        Ctrl K
-      </button>
+      {!platform.phone && (
+        <button
+          onClick={() => useApp.setState({ paletteOpen: true })}
+          className="ml-auto flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-line px-3 text-[13px] text-muted hover:bg-hover hover:text-fg"
+          title="Command palette"
+        >
+          Ctrl K
+        </button>
+      )}
     </header>
   )
 }

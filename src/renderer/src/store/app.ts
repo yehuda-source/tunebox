@@ -7,6 +7,8 @@ interface AppState {
   tools: ToolStatus | null
   queueOpen: boolean
   paletteOpen: boolean
+  /** Phone: the full-screen player. */
+  nowPlayingOpen: boolean
   update: (patch: Partial<Settings>) => Promise<void>
 }
 
@@ -15,6 +17,7 @@ export const useApp = create<AppState>((set) => ({
   tools: null,
   queueOpen: false,
   paletteOpen: false,
+  nowPlayingOpen: false,
   update: async (patch) => {
     try {
       set({ settings: await window.api.settings.set(patch) })

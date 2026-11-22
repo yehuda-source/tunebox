@@ -52,7 +52,7 @@ export function ArtistView({ id }: { id: string }): React.JSX.Element {
 
   return (
     <div>
-      <div className="relative h-80 overflow-hidden">
+      <div className="relative h-80 overflow-hidden max-sm:h-56">
         {data?.banner && !bannerFailed ? (
           <img
             src={data.banner}
@@ -65,12 +65,14 @@ export function ArtistView({ id }: { id: string }): React.JSX.Element {
           <div className="absolute inset-0 bg-gradient-to-br from-accent/40 to-bg" />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-bg via-bg/50 to-transparent" />
-        <div className="absolute bottom-0 left-0 right-0 mx-auto max-w-[1400px] px-8 pb-6">
+        <div className="absolute bottom-0 left-0 right-0 mx-auto max-w-[1400px] px-8 pb-6 max-sm:px-4 max-sm:pb-4">
           {loading || !data ? (
-            <Skeleton className="h-16 w-96" />
+            <Skeleton className="h-16 w-96 max-sm:w-60" />
           ) : (
             <>
-              <h1 className="text-7xl font-black tracking-tight drop-shadow-lg">{data.name}</h1>
+              <h1 className="text-7xl font-black tracking-tight drop-shadow-lg max-sm:text-4xl">
+                {data.name}
+              </h1>
               {data.subtitle && <div className="mt-2 text-muted">{data.subtitle}</div>}
             </>
           )}
@@ -78,7 +80,7 @@ export function ArtistView({ id }: { id: string }): React.JSX.Element {
       </div>
       <Page>
         {data && (
-          <div className="flex gap-3 pt-6">
+          <div className="flex flex-wrap gap-3 pt-6">
             <Button
               variant="primary"
               size="lg"

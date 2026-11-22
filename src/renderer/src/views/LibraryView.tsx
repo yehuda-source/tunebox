@@ -1,6 +1,15 @@
 import { useDeferredValue, useMemo, useState } from 'react'
 import { create } from 'zustand'
-import { Library as LibIcon, Search, RefreshCw, Shuffle, Play, X } from 'lucide-react'
+import {
+  Library as LibIcon,
+  Search,
+  RefreshCw,
+  Shuffle,
+  Play,
+  X,
+  ListMusic,
+  Plus
+} from 'lucide-react'
 import { useLibrary, groupAlbums, coverUrl } from '../store/library'
 import { LibraryTable } from '../components/LibraryTable'
 import { Tabs, Empty, Button, Cover } from '../components/ui'
@@ -9,8 +18,10 @@ import { useNav, go } from '../store/nav'
 import { player, fromLibrary, usePlayer } from '../store/player'
 import { toast } from '../store/toast'
 import { useScrollEl } from '../lib/scroll'
+import { platform } from '../lib/platform'
+import { dialogs } from '../store/dialogs'
 
-type Tab = 'songs' | 'albums' | 'artists'
+type Tab = 'songs' | 'albums' | 'artists' | 'playlists'
 
 /** Kept outside the view so switching Songs/Albums/Artists keeps what you typed. */
 const useFilter = create<{ filter: string }>(() => ({ filter: '' }))
@@ -69,9 +80,11 @@ export function LibraryView({ tab, artist }: { tab: Tab; artist?: string }): Rea
 
   return (
     <Page>
-      <div className="flex items-end justify-between gap-4 pb-4 pt-2">
+      <div className="flex items-end justify-between gap-4 pb-4 pt-2 max-sm:flex-col max-sm:items-stretch max-sm:gap-3">
         <div>
-          <h1 className="text-4xl font-black tracking-tight">{artist ?? 'Your library'}</h1>
+          <h1 className="text-4xl font-black tracking-tight max-sm:text-3xl">
+            {artist ?? 'Your library'}
+          </h1>
           <div className="mt-1 text-muted">
             {filtered.length} songs • {albums.length} albums
             {!artist && ` • ${artists.length} artists`}
@@ -99,25 +112,29 @@ export function LibraryView({ tab, artist }: { tab: Tab; artist?: string }): Rea
           >
             Shuffle
           </Button>
-          <Button
-            variant="ghost"
-            icon={<RefreshCw className={scanning ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} />}
-            onClick={rescan}
-            disabled={scanning}
-          >
-            Rescan
-          </Button>
+          {!platform.phone && (
+            <Button
+              variant="ghost"
+              icon={<RefreshCw className={scanning ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} />}
+              onClick={rescan}
+              disabled={scanning}
+            >
+              Rescan
+            </Button>
+          )}
         </div>
       </div>
 
-      <div className="mb-4 flex items-center gap-3">
+      <div className="mb-4 flex items-center gap-3 max-sm:flex-wrap">
         <Tabs<Tab>
           value={tab}
           onChange={setTab}
           tabs={[
             { id: 'songs', label: 'Songs' },
             { id: 'albums', label: 'Albums' },
-            ...(artist ? [] : [{ id: 'artists' as Tab, label: 'Artists' }])
+            ...(artist ? [] : [{ id: 'artists' as Tab, label: 'Artists' }]),
+            // The desktop lists playlists in the sidebar; the phone has no sidebar.
+            ...(platform.phone && !artist ? [{ id: 'playlists' as Tab, label: 'Playlists' }] : [])
           ]}
         />
         {artist && (
@@ -130,7 +147,7 @@ export function LibraryView({ tab, artist }: { tab: Tab; artist?: string }): Rea
             All artists
           </Button>
         )}
-        <div className="relative ml-auto w-72">
+        <div className="relative ml-auto w-72 max-sm:order-first max-sm:ml-0 max-sm:w-full">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-faint" />
           <input
             value={filter}
@@ -151,6 +168,8 @@ export function LibraryView({ tab, artist }: { tab: Tab; artist?: string }): Rea
             </Button>
           </div>
         </Empty>
+      ) : tab === 'playlists' ? (
+        <PlaylistList />
       ) : tab === 'songs' ? (
         <LibraryTable tracks={filtered} scrollEl={scrollEl} />
       ) : tab === 'albums' ? (
@@ -213,5 +232,51 @@ export function LibraryView({ tab, artist }: { tab: Tab; artist?: string }): Rea
         </Grid>
       )}
     </Page>
+  )
+}
+
+/** Phone: playlists live under Library (the desktop shows them in the sidebar). */
+function PlaylistList(): React.JSX.Element {
+  const playlists = useLibrary((s) => s.playlists)
+  const create = async (): Promise<void> => {
+    const name = await dialogs.prompt('New playlist', '', 'Playlist name')
+    if (!name) return
+    try {
+      const pl = await window.api.playlists.create(name)
+      await useLibrary.getState().loadPlaylists()
+      go({ name: 'playlist', id: pl.id })
+    } catch (err) {
+      toast.error('Could not create playlist', err)
+    }
+  }
+  return (
+    <div className="flex flex-col">
+      <button
+        onClick={create}
+        className="flex h-16 items-center gap-3 rounded-lg px-1 text-left active:bg-hover"
+      >
+        <span className="flex h-12 w-12 items-center justify-center rounded-md bg-elev text-accent">
+          <Plus className="h-6 w-6" />
+        </span>
+        <span className="font-medium">New playlist</span>
+      </button>
+      {playlists.map((p) => (
+        <button
+          key={p.id}
+          onClick={() => go({ name: 'playlist', id: p.id })}
+          className="flex h-16 items-center gap-3 rounded-lg px-1 text-left active:bg-hover"
+        >
+          <span className="flex h-12 w-12 items-center justify-center rounded-md bg-elev text-muted">
+            <ListMusic className="h-6 w-6" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate font-medium">{p.name}</span>
+            <span className="block text-[13px] text-muted">
+              {p.trackCount} song{p.trackCount === 1 ? '' : 's'}
+            </span>
+          </span>
+        </button>
+      ))}
+    </div>
   )
 }

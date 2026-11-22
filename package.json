@@ -36,12 +36,10 @@
     "youtubei.js": "^18.3.0"
   },
   "devDependencies": {
-    "@capacitor-community/sqlite": "^8.1.1",
     "@capacitor/android": "^8.6.2",
     "@capacitor/app": "^8.1.2",
     "@capacitor/cli": "^8.6.2",
     "@capacitor/core": "^8.6.2",
-    "@capacitor/filesystem": "^8.1.5",
     "@electron-toolkit/eslint-config-prettier": "^3.0.1",
     "@electron-toolkit/eslint-config-ts": "^4.0.0",
     "@electron-toolkit/tsconfig": "^2.0.0",

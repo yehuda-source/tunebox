@@ -20,13 +20,17 @@ interface Logger {
 let log: Logger = { warn: console.warn, debug: () => undefined }
 /** Plain YouTube search used when YouTube Music can't be reached (desktop: yt-dlp). */
 let fallbackSearch: (q: string) => Promise<TrackRef[]> = async () => []
+/** The phone app routes requests through native HTTP (no CORS) and needs its own fetch. */
+let customFetch: typeof fetch | undefined
 
 export function configureYtMusic(opts: {
   logger?: Logger
   fallbackSearch?: (q: string) => Promise<TrackRef[]>
+  fetch?: typeof fetch
 }): void {
   if (opts.logger) log = opts.logger
   if (opts.fallbackSearch) fallbackSearch = opts.fallbackSearch
+  if (opts.fetch) customFetch = opts.fetch
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -43,12 +47,14 @@ let client: Promise<Innertube> | null = null
 
 function yt(): Promise<Innertube> {
   if (!client) {
-    client = Innertube.create({ retrieve_player: false, generate_session_locally: true }).catch(
-      (err) => {
-        client = null
-        throw err
-      }
-    )
+    client = Innertube.create({
+      retrieve_player: false,
+      generate_session_locally: true,
+      fetch: customFetch
+    }).catch((err) => {
+      client = null
+      throw err
+    })
   }
   return client
 }

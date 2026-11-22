@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseProgressLine } from '../src/main/downloads/progress'
+import { parseProgressLine } from '../src/shared/progress'
 
 describe('parseProgressLine', () => {
   it('parses a full progress line', () => {

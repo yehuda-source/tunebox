@@ -9,6 +9,7 @@ import { usePlayer, player, fromLibrary } from '../store/player'
 import { coverUrl } from '../store/library'
 import { go } from '../store/nav'
 import { duration, cn } from '../lib/format'
+import { platform } from '../lib/platform'
 
 type SortKey = 'default' | 'title' | 'artist' | 'album' | 'duration' | 'added'
 
@@ -30,6 +31,44 @@ const Row = memo(function Row({
   const isCurrent = usePlayer((s) => s.queue[s.index]?.trackId === t.id)
   const playing = usePlayer((s) => s.playing)
   const actions = (): MenuAction[] => libraryActions(t, extraActions?.(t))
+  if (platform.phone)
+    return (
+      <ContextMenu actions={actions}>
+        <div
+          onClick={() => onPlay(i)}
+          className="flex h-16 items-center gap-3 rounded-lg px-1 active:bg-hover"
+        >
+          {showAlbum ? (
+            <Cover src={t.hasCover ? coverUrl(t.id) : undefined} size={48} />
+          ) : (
+            <div className="w-6 shrink-0 text-center text-[13px] tabular-nums text-muted">
+              {isCurrent ? (
+                <Eq paused={!playing} />
+              ) : numberBy === 'track' ? (
+                (t.trackNumber ?? '–')
+              ) : (
+                i + 1
+              )}
+            </div>
+          )}
+          <div className="min-w-0 flex-1">
+            <div className={cn('truncate font-medium', isCurrent && 'text-accent')}>{t.title}</div>
+            <div className="truncate text-[13px] text-muted">
+              {[t.artist, showAlbum ? t.album : duration(t.durationSec)]
+                .filter(Boolean)
+                .join(' • ')}
+            </div>
+          </div>
+          <div onClick={(e) => e.stopPropagation()}>
+            <DropdownMenu actions={actions}>
+              <IconButton label="More" size={40}>
+                <MoreHorizontal className="h-5 w-5" />
+              </IconButton>
+            </DropdownMenu>
+          </div>
+        </div>
+      </ContextMenu>
+    )
   return (
     <ContextMenu actions={actions}>
       <div
@@ -132,7 +171,7 @@ export function LibraryTable({
   const v = useVirtualizer({
     count: sorted.length,
     getScrollElement: () => scrollEl,
-    estimateSize: () => 56,
+    estimateSize: () => (platform.phone ? 64 : 56),
     overscan: 12,
     scrollMargin: listRef.current?.offsetTop ?? 0
   })
@@ -161,20 +200,22 @@ export function LibraryTable({
 
   return (
     <div>
-      <div
-        className={cn(
-          'sticky top-0 z-[5] grid h-10 items-center gap-3 border-b border-line bg-bg px-3 text-xs font-medium uppercase tracking-wider text-faint',
-          showAlbum
-            ? 'grid-cols-[28px_minmax(0,4fr)_minmax(0,3fr)_64px_40px]'
-            : 'grid-cols-[28px_minmax(0,1fr)_64px_40px]'
-        )}
-      >
-        <span className="text-center">#</span>
-        {header('title', 'Title')}
-        {showAlbum && header('album', 'Album')}
-        {header('duration', 'Time', 'justify-end')}
-        <span />
-      </div>
+      {!platform.phone && (
+        <div
+          className={cn(
+            'sticky top-0 z-[5] grid h-10 items-center gap-3 border-b border-line bg-bg px-3 text-xs font-medium uppercase tracking-wider text-faint',
+            showAlbum
+              ? 'grid-cols-[28px_minmax(0,4fr)_minmax(0,3fr)_64px_40px]'
+              : 'grid-cols-[28px_minmax(0,1fr)_64px_40px]'
+          )}
+        >
+          <span className="text-center">#</span>
+          {header('title', 'Title')}
+          {showAlbum && header('album', 'Album')}
+          {header('duration', 'Time', 'justify-end')}
+          <span />
+        </div>
+      )}
       <div ref={listRef} className="relative mt-1" style={{ height: v.getTotalSize() }}>
         {v.getVirtualItems().map((item) => (
           <div

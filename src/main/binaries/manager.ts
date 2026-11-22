@@ -15,7 +15,7 @@ import type { ToolInfo, ToolStatus } from '../../shared/types'
 import { getSettings } from '../settings'
 import { run, ProcError } from '../proc'
 import { emit } from '../events'
-import { friendlyError } from '../errors'
+import { friendlyError } from '../../shared/errors'
 import log from '../log'
 
 const isWin = process.platform === 'win32'
@@ -271,8 +271,7 @@ export async function forceUpdateIfStale(): Promise<boolean> {
   return status.ytdlp.version !== before
 }
 
-export const OUTDATED_PATTERN =
-  /Signature extraction failed|nsig extraction failed|n challenge|Unable to extract|HTTP Error 403|Precondition check failed|Requested format is not available|Some formats may be missing|confirm you.re not a bot/i
+export { OUTDATED_PATTERN } from '../../shared/errors'
 
 // ---------- self test ----------
 

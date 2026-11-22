@@ -4,16 +4,9 @@ import { join, extname } from 'path'
 import { ffmpegPath } from '../binaries/manager'
 import { run } from '../proc'
 import log from '../log'
+import { metadataArgs, type Tags } from '../../shared/tags'
 
-export interface Tags {
-  title: string
-  artist: string
-  album?: string
-  albumArtist?: string
-  trackNumber?: number | null
-  year?: string | null
-  videoId?: string | null
-}
+export type { Tags }
 
 /** Fetch a thumbnail and turn it into a square JPEG suitable as album art. */
 export async function prepareCover(
@@ -50,19 +43,6 @@ export async function prepareCover(
     log.warn('Could not prepare cover art', err)
     return null
   }
-}
-
-function metadataArgs(t: Tags, flag = '-metadata'): string[] {
-  const m: Record<string, string | undefined> = {
-    title: t.title,
-    artist: t.artist,
-    album: t.album,
-    album_artist: t.albumArtist,
-    track: t.trackNumber ? String(t.trackNumber) : undefined,
-    date: t.year ?? undefined,
-    comment: t.videoId ? `youtube:${t.videoId}` : undefined
-  }
-  return Object.entries(m).flatMap(([k, v]) => [flag, `${k}=${v ?? ''}`])
 }
 
 /** A FLAC picture block (base64), the way Ogg/Opus files carry cover art. */

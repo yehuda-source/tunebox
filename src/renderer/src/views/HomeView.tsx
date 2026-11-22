@@ -53,7 +53,9 @@ export function HomeView(): React.JSX.Element {
     <Page>
       <div className="relative -mx-8 mb-6 overflow-hidden px-8 pb-10 pt-6">
         <div className="pointer-events-none absolute -left-20 -top-40 h-96 w-[60rem] rounded-full bg-accent/20 blur-3xl" />
-        <h1 className="relative text-5xl font-black tracking-tight">{greeting()}</h1>
+        <h1 className="relative text-5xl font-black tracking-tight max-sm:text-4xl">
+          {greeting()}
+        </h1>
         <p className="relative mt-2 text-lg text-muted">
           Search above, or start with one of these:
         </p>

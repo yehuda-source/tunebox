@@ -3,8 +3,14 @@ import { BellPlus, BellRing } from 'lucide-react'
 import type { ArtistRef } from '@shared/types'
 import { useFollows, toggleFollow } from '../store/follows'
 import { Button, Spinner } from './ui'
+import { platform } from '../lib/platform'
 
-export function FollowButton({ artist }: { artist: ArtistRef }): React.JSX.Element {
+export function FollowButton({ artist }: { artist: ArtistRef }): React.JSX.Element | null {
+  // Following (auto-downloads) isn't in the phone app yet.
+  return platform.phone ? null : <DesktopFollowButton artist={artist} />
+}
+
+function DesktopFollowButton({ artist }: { artist: ArtistRef }): React.JSX.Element {
   const following = useFollows((s) => s.ids.has(artist.channelId))
   const [busy, setBusy] = useState(false)
   return (

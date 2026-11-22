@@ -9,6 +9,7 @@ import { findLocal, useLibrary } from '../store/library'
 import { useDownloads, download } from '../store/downloads'
 import { go } from '../store/nav'
 import { duration, cn } from '../lib/format'
+import { platform } from '../lib/platform'
 
 export function DownloadButton({ track }: { track: TrackRef }): React.JSX.Element {
   const inLib = useLibrary((s) => findLocal(track, s) !== undefined)
@@ -52,6 +53,59 @@ export function DownloadButton({ track }: { track: TrackRef }): React.JSX.Elemen
   )
 }
 
+/** Phone: tap to play, menu always visible, no album or length columns. */
+function PhoneRow({
+  track,
+  i,
+  numbered,
+  showCover,
+  isCurrent,
+  playing,
+  onPlay
+}: {
+  track: TrackRef
+  i: number
+  numbered: boolean
+  showCover: boolean
+  isCurrent: boolean
+  playing: boolean
+  onPlay: (i: number) => void
+}): React.JSX.Element {
+  return (
+    <ContextMenu actions={() => refActions(track)}>
+      <div
+        className="flex h-16 items-center gap-3 rounded-lg px-1 active:bg-hover"
+        onClick={() => onPlay(i)}
+      >
+        {numbered && (
+          <div className="w-6 shrink-0 text-center text-[13px] tabular-nums text-muted">
+            {isCurrent ? <Eq paused={!playing} /> : (track.trackNumber ?? i + 1)}
+          </div>
+        )}
+        {showCover && <Cover src={track.thumbnail} size={48} />}
+        <div className="min-w-0 flex-1">
+          <div className={cn('truncate font-medium', isCurrent && 'text-accent')}>
+            {track.title}
+          </div>
+          <div className="truncate text-[13px] text-muted">
+            {[track.artists.join(', '), track.durationSec ? duration(track.durationSec) : '']
+              .filter(Boolean)
+              .join(' • ')}
+          </div>
+        </div>
+        <div className="flex shrink-0 items-center" onClick={(e) => e.stopPropagation()}>
+          <DownloadButton track={track} />
+          <DropdownMenu actions={() => refActions(track)}>
+            <IconButton label="More" size={40}>
+              <MoreHorizontal className="h-5 w-5" />
+            </IconButton>
+          </DropdownMenu>
+        </div>
+      </div>
+    </ContextMenu>
+  )
+}
+
 const Row = memo(function Row({
   track,
   i,
@@ -69,6 +123,18 @@ const Row = memo(function Row({
 }) {
   const isCurrent = usePlayer((s) => s.queue[s.index]?.videoId === track.videoId)
   const playing = usePlayer((s) => s.playing)
+  if (platform.phone)
+    return (
+      <PhoneRow
+        track={track}
+        i={i}
+        numbered={numbered}
+        showCover={showCover}
+        isCurrent={isCurrent}
+        playing={playing}
+        onPlay={onPlay}
+      />
+    )
   return (
     <ContextMenu actions={() => refActions(track)}>
       <div

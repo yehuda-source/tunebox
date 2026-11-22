@@ -27,7 +27,7 @@ export function AlbumView({ id }: { id: string }): React.JSX.Element {
 
   return (
     <Page>
-      <div className="flex items-end gap-8 pb-8 pt-4">
+      <div className="flex items-end gap-8 pb-8 pt-4 max-sm:flex-col max-sm:items-start max-sm:gap-5 max-sm:pb-6">
         {loading || !data ? (
           <>
             <Skeleton className="h-56 w-56 rounded-xl" />
@@ -39,12 +39,19 @@ export function AlbumView({ id }: { id: string }): React.JSX.Element {
           </>
         ) : (
           <>
-            <Cover src={data.thumbnail} size={224} rounded="lg" className="shadow-2xl" />
+            <Cover
+              src={data.thumbnail}
+              size={224}
+              rounded="lg"
+              className="shadow-2xl max-sm:h-44! max-sm:w-44!"
+            />
             <div className="min-w-0 flex-1">
               <div className="text-[13px] font-semibold uppercase tracking-wider text-muted">
                 {data.kind || 'Album'}
               </div>
-              <h1 className="mt-2 line-clamp-2 text-5xl font-black tracking-tight">{data.title}</h1>
+              <h1 className="mt-2 line-clamp-2 text-5xl font-black tracking-tight max-sm:text-3xl">
+                {data.title}
+              </h1>
               <div className="mt-4 flex flex-wrap items-center gap-x-2 text-[14px] text-muted">
                 <button
                   className="font-semibold text-fg hover:underline"
@@ -63,7 +70,7 @@ export function AlbumView({ id }: { id: string }): React.JSX.Element {
                   </span>
                 )}
               </div>
-              <div className="mt-6 flex gap-3">
+              <div className="mt-6 flex flex-wrap gap-3">
                 <Button
                   variant="primary"
                   size="lg"

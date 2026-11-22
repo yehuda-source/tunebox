@@ -3,6 +3,7 @@ import { CopyX } from 'lucide-react'
 import { Button, Spinner } from './ui'
 import { dialogs } from '../store/dialogs'
 import { toast } from '../store/toast'
+import { platform } from '../lib/platform'
 
 /** Finds songs stored more than once and, after confirmation, trashes the extra copies. */
 export function DuplicatesButton(): React.JSX.Element {
@@ -24,8 +25,9 @@ export function DuplicatesButton(): React.JSX.Element {
           <p>
             {groups.length} song{groups.length === 1 ? ' is' : 's are'} stored more than once,
             usually because they appear on several albums or compilations. The first copy you
-            downloaded is kept; the others move to the system trash, and playlists switch to the
-            kept copy.
+            downloaded is kept; the others{' '}
+            {platform.phone ? 'are deleted from your phone' : 'move to the system trash'}, and
+            playlists switch to the kept copy.
           </p>
           <ul className="flex flex-col gap-1 rounded-lg bg-elev p-3 text-[13px]">
             {examples.map((g) => (
@@ -40,7 +42,7 @@ export function DuplicatesButton(): React.JSX.Element {
             )}
           </ul>
         </div>,
-        'Move to trash',
+        platform.phone ? 'Delete copies' : 'Move to trash',
         true
       )
       if (!ok) return

@@ -6,7 +6,11 @@ import { go } from '../store/nav'
 import { cn, errorMessage } from '../lib/format'
 
 export function Page({ children }: { children: ReactNode }): React.JSX.Element {
-  return <div className="mx-auto w-full max-w-[1400px] px-8 pb-16">{children}</div>
+  return (
+    <div className="mx-auto w-full max-w-[1400px] px-8 pb-16 max-sm:px-4 max-sm:pb-8">
+      {children}
+    </div>
+  )
 }
 
 export function AlbumCard({ album }: { album: AlbumRef }): React.JSX.Element {

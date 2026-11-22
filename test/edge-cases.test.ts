@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { chooseDestination } from '../src/main/library/organizer'
 import { splitNewReleases } from '../src/main/follow-filter'
-import { friendlyError } from '../src/main/errors'
+import { friendlyError } from '../src/shared/errors'
 import { pickShuffle } from '../src/renderer/src/store/shuffle'
 
 describe('chooseDestination', () => {

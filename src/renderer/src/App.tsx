@@ -26,6 +26,8 @@ import { initDownloadStore } from './store/downloads'
 import { initFollowStore } from './store/follows'
 import { player } from './store/player'
 import { ScrollContext } from './lib/scroll'
+import { platform } from './lib/platform'
+import { BottomTabs, MiniPlayer, NowPlaying } from './components/PhoneShell'
 
 let initialized = false
 function init(): void {
@@ -117,17 +119,35 @@ export default function App(): React.JSX.Element {
     scrollRef.current?.scrollTo({ top: 0 })
   }, [index])
 
+  const content = (
+    <main ref={scrollRef} className="relative min-h-0 flex-1 overflow-y-auto">
+      <ScrollContext.Provider value={scrollEl}>
+        <View key={JSON.stringify(route)} route={route} />
+      </ScrollContext.Provider>
+    </main>
+  )
+
+  if (platform.phone)
+    return (
+      <div className="flex h-full flex-col pt-[env(safe-area-inset-top)]">
+        <TopBar />
+        {content}
+        <MiniPlayer />
+        <BottomTabs />
+        <QueuePanel />
+        <NowPlaying />
+        <Toaster />
+        <DialogHost />
+      </div>
+    )
+
   return (
     <div className="flex h-full flex-col">
       <div className="flex min-h-0 flex-1">
         <Sidebar />
         <div className="flex min-w-0 flex-1 flex-col">
           <TopBar />
-          <main ref={scrollRef} className="relative min-h-0 flex-1 overflow-y-auto">
-            <ScrollContext.Provider value={scrollEl}>
-              <View key={JSON.stringify(route)} route={route} />
-            </ScrollContext.Provider>
-          </main>
+          {content}
         </div>
         <QueuePanel />
       </div>

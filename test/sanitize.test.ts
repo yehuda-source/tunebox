@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { safeName } from '../src/main/sanitize'
+import { safeName } from '../src/shared/sanitize'
 
 describe('safeName', () => {
   it('replaces characters Windows forbids', () => {

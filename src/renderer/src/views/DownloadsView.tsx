@@ -149,9 +149,9 @@ export function DownloadsView(): React.JSX.Element {
 
   return (
     <Page>
-      <div className="flex items-end justify-between pb-6 pt-2">
+      <div className="flex items-end justify-between gap-3 pb-6 pt-2 max-sm:flex-col max-sm:items-stretch">
         <div>
-          <h1 className="text-4xl font-black tracking-tight">Downloads</h1>
+          <h1 className="text-4xl font-black tracking-tight max-sm:text-3xl">Downloads</h1>
           <div className="mt-1 text-muted">
             {active.length
               ? `${active.length} in progress, ${formatEta(eta)}`
@@ -159,7 +159,7 @@ export function DownloadsView(): React.JSX.Element {
             • {finished.filter((j) => j.status === 'done').length} completed
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {failed.length > 0 && (
             <Button
               icon={<RotateCcw className="h-4 w-4" />}

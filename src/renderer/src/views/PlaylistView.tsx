@@ -63,13 +63,20 @@ export function PlaylistView({ id }: { id: number }): React.JSX.Element {
 
   return (
     <Page>
-      <div className="flex items-end gap-8 pb-8 pt-4">
-        <Cover src={coverUrl(coverId)} size={224} rounded="lg" className="shadow-2xl" />
+      <div className="flex items-end gap-8 pb-8 pt-4 max-sm:flex-col max-sm:items-start max-sm:gap-5 max-sm:pb-6">
+        <Cover
+          src={coverUrl(coverId)}
+          size={224}
+          rounded="lg"
+          className="shadow-2xl max-sm:h-44! max-sm:w-44!"
+        />
         <div className="min-w-0 flex-1">
           <div className="text-[13px] font-semibold uppercase tracking-wider text-muted">
             Playlist
           </div>
-          <h1 className="mt-2 line-clamp-2 text-5xl font-black tracking-tight">{playlist.name}</h1>
+          <h1 className="mt-2 line-clamp-2 text-5xl font-black tracking-tight max-sm:text-3xl">
+            {playlist.name}
+          </h1>
           <div className="mt-4 text-muted">
             {tracks.length} songs
             {tracks.length > 0 && `, ${totalDuration(tracks.map((t) => t.durationSec))}`}

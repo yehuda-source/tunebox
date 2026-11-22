@@ -5,9 +5,9 @@ import { ChevronRight } from 'lucide-react'
 import type { MenuAction } from './menuActions'
 
 const menuCls =
-  'z-50 min-w-[200px] overflow-hidden rounded-xl border border-line bg-panel p-1 shadow-2xl'
+  'z-50 min-w-[200px] overflow-hidden max-sm:min-w-[230px] rounded-xl border border-line bg-panel p-1 shadow-2xl'
 const itemCls =
-  'flex h-8 cursor-default select-none items-center gap-2 rounded-lg px-2.5 text-[13px] outline-none data-[highlighted]:bg-hover data-[disabled]:opacity-40'
+  'flex h-8 cursor-default select-none items-center gap-2 rounded-lg px-2.5 text-[13px] outline-none max-sm:h-11 max-sm:px-3 max-sm:text-[15px] data-[highlighted]:bg-hover data-[disabled]:opacity-40'
 
 function CMItems({ items }: { items: MenuAction[] }): React.JSX.Element {
   return (

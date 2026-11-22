@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatArgs } from '../src/main/downloads/format'
+import { formatArgs } from '../src/shared/format'
 
 const after = (args: string[], flag: string): string => args[args.indexOf(flag) + 1]
 

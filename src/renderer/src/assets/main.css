@@ -140,3 +140,8 @@ textarea {
 .eq.paused span {
   animation-play-state: paused;
 }
+
+/* Phone: touch scrolling needs no scrollbars (and the bars would eat into a narrow screen). */
+html[data-phone] ::-webkit-scrollbar {
+  display: none;
+}

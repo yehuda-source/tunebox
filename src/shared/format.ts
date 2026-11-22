@@ -1,4 +1,4 @@
-import type { AudioFormat } from '../../shared/types'
+import type { AudioFormat } from './types'
 
 /**
  * yt-dlp copies audio untouched when the source already has the target codec, ignoring the
