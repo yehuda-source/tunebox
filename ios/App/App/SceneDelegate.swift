@@ -5,7 +5,10 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     var window: UIWindow?
 
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
-        guard let windowScene = scene as? UIWindowScene else { return }
+        // Only the phone's own window gets the app. AirPlay/external displays also arrive here; giving
+        // them a second copy of the app (a second web view and backend writing the same library)
+        // showed that copy on the TV instead of mirroring the phone.
+        guard let windowScene = scene as? UIWindowScene, session.role == .windowApplication else { return }
 
         window = UIWindow(windowScene: windowScene)
         // MainViewController registers TuneBox's native plugins (Native/).
