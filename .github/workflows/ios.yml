@@ -36,7 +36,7 @@ jobs:
             -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath build/sim ARCHS=arm64 ONLY_ACTIVE_ARCH=YES CODE_SIGNING_ALLOWED=NO \
             build 2>&1 | tee build-sim.log | grep -E 'error:|BUILD (SUCCEEDED|FAILED)|\*\* ' || true
-          test -d build/sim/Build/Products/Debug-iphonesimulator/App.app
+          grep -q 'BUILD SUCCEEDED' build-sim.log
 
       - name: Self-test in the simulator
         run: |
@@ -74,6 +74,7 @@ jobs:
             ARCHS=arm64 CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
             MARKETING_VERSION="$VERSION" CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
             build 2>&1 | tee build-device.log | grep -E 'error:|BUILD (SUCCEEDED|FAILED)|\*\* ' || true
+          grep -q 'BUILD SUCCEEDED' build-device.log
           mkdir -p Payload ipa
           cp -R build/device/Build/Products/Release-iphoneos/App.app Payload/
           zip -qry "ipa/TuneBox-$VERSION-ios-unsigned.ipa" Payload

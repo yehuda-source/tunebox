@@ -42,9 +42,9 @@ final class PythonRuntime {
     /// Calls tunebox_bridge.<function>(*args). Safe from any thread; blocks until it returns.
     func call(_ function: String, _ args: [String] = []) throws -> String {
         try ensureStarted()
-        let copies = args.map { strdup($0) }
+        let copies: [UnsafeMutablePointer<CChar>] = args.map { strdup($0)! }
         defer { copies.forEach { free($0) } }
-        let pointers: [UnsafePointer<CChar>?] = copies.map { UnsafePointer($0) }
+        let pointers: [UnsafePointer<CChar>] = copies.map { UnsafePointer($0) }
         var failed: Int32 = 0
         let result = pointers.withUnsafeBufferPointer { buffer in
             tb_python_call(function, buffer.baseAddress, Int32(args.count), &failed)
