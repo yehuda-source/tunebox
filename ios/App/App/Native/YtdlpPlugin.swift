@@ -15,6 +15,7 @@ public class YtdlpPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "cancel", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "tag", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "selfTest", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "jscCheck", returnType: CAPPluginReturnPromise),
     ]
 
     private let python = PythonRuntime.shared
@@ -119,6 +120,13 @@ public class YtdlpPlugin: CAPPlugin, CAPBridgedPlugin {
             "requested": ProcessInfo.processInfo.arguments.contains("-tunebox-selftest"),
             "results": docs.appendingPathComponent("selftest.json").path,
         ])
+    }
+
+    /// Solves a real YouTube challenge in JavaScriptCore (for the self-test).
+    @objc func jscCheck(_ call: CAPPluginCall) {
+        background(call) {
+            call.resolve(try Self.object(try self.python.call("jsc_check")))
+        }
     }
 
     private static func object(_ json: String) throws -> [String: Any] {

@@ -345,5 +345,41 @@ def tag(path, tags_json, cover_path):
     return 'ok'
 
 
+def jsc_check():
+    """Solve a real YouTube challenge with the current player script in JavaScriptCore.
+
+    Checks the challenge solver on its own (for CI, where YouTube blocks the video pages).
+    Returns JSON {player, seconds, input, output}.
+    """
+    import re
+
+    import yt_dlp_ejs.yt.solver as solver
+
+    def get(url):
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req, timeout=60, context=_ssl_context()) as r:
+            return r.read().decode()
+
+    player_id = re.search(r'player\\?/([0-9a-zA-Z_-]{8})\\?/', get('https://www.youtube.com/iframe_api')).group(1)
+    player = get(f'https://www.youtube.com/s/player/{player_id}/player_ias.vflset/en_US/base.js')
+    challenge = 'ZdZIqFPQK-Ty8wId'
+    data = {'type': 'player', 'player': player, 'output_preprocessed': False,
+            'requests': [{'type': 'n', 'challenges': [challenge]}]}
+    script = (f'{solver.lib()}\nObject.assign(globalThis, lib);\n{solver.core()}\n'
+              f'console.log(JSON.stringify(jsc({json.dumps(data)})));')
+    began = time.time()
+    out = json.loads(js_eval(script))
+    seconds = round(time.time() - began, 2)
+    if out.get('type') == 'error':
+        raise RuntimeError(out.get('error'))
+    response = out['responses'][0]
+    if response.get('type') == 'error':
+        raise RuntimeError(response.get('error'))
+    solved = response['data'][challenge]
+    if not solved or solved == challenge:
+        raise RuntimeError(f'Unexpected solution {solved!r}')
+    return json.dumps({'player': player_id, 'seconds': seconds, 'input': challenge, 'output': solved})
+
+
 def ping():
     return json.dumps({'python': sys.version.split()[0], 'time': time.time()})

@@ -27,6 +27,8 @@ export interface YtdlpPlugin {
   tag(options: { path: string; tags: Record<string, unknown>; cover?: string }): Promise<void>
   /** iOS only: whether the app was launched for the automated check. */
   selfTest(): Promise<{ requested: boolean; results: string }>
+  /** iOS only: solve a real YouTube challenge in JavaScriptCore. */
+  jscCheck(): Promise<{ player: string; seconds: number; input: string; output: string }>
   addListener(event: 'progress', cb: (e: YtdlpProgress) => void): Promise<PluginListenerHandle>
 }
 
