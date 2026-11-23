@@ -3,7 +3,6 @@
 // Results go to selftest.json next to the Music folder, where the workflow picks them up.
 import type { LibraryTrack, TrackRef } from '@shared/types'
 import { Files, NativePlayer, Ytdlp } from './native'
-import { paths } from './settings'
 
 interface Step {
   name: string
@@ -29,16 +28,14 @@ async function waitFor<T>(
 }
 
 export async function runSelfTestIfRequested(): Promise<void> {
-  const requested = await Ytdlp.selfTest().then(
-    (r) => r.requested,
-    () => false
-  )
-  if (!requested) return
+  const request = await Ytdlp.selfTest().catch(() => null)
+  if (!request?.requested) return
+  console.log('TuneBox self-test: starting')
 
   const { player, fromRef, fromLibrary } = await import('../store/player')
   const { go } = await import('../store/nav')
   const steps: Step[] = []
-  const out = `${paths.music.replace(/\/Music$/, '')}/selftest.json`
+  const out = request.results
   const save = (done: boolean): Promise<void> =>
     Files.writeText({ path: out, text: JSON.stringify({ done, steps }, null, 2) })
 
@@ -50,6 +47,7 @@ export async function runSelfTestIfRequested(): Promise<void> {
     } catch (err) {
       steps.push({ name, ok: false, ms: Date.now() - t, detail: String(err) })
     }
+    console.log(`TuneBox self-test: ${JSON.stringify(steps.at(-1))}`)
     await save(false)
     return steps.at(-1)!.ok
   }

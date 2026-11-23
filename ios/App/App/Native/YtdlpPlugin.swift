@@ -44,6 +44,7 @@ public class YtdlpPlugin: CAPPlugin, CAPBridgedPlugin {
             do {
                 try work()
             } catch {
+                NSLog("TuneBox: %@ failed: %@", call.methodName, error.localizedDescription)
                 call.reject(error.localizedDescription)
             }
         }
@@ -51,7 +52,10 @@ public class YtdlpPlugin: CAPPlugin, CAPBridgedPlugin {
 
     @objc func start(_ call: CAPPluginCall) {
         background(call) {
+            let began = Date()
+            NSLog("TuneBox: starting Python")
             let version = try self.python.call("setup", [YtdlpPlugin.supportDir.appendingPathComponent("yt-dlp").path])
+            NSLog("TuneBox: yt-dlp %@ ready in %.1fs", version, Date().timeIntervalSince(began))
             call.resolve([
                 "version": version,
                 "musicDir": YtdlpPlugin.musicDir.path,
@@ -110,7 +114,11 @@ public class YtdlpPlugin: CAPPlugin, CAPBridgedPlugin {
 
     /// Whether the app was launched for the automated check (CI passes -tunebox-selftest).
     @objc func selfTest(_ call: CAPPluginCall) {
-        call.resolve(["requested": ProcessInfo.processInfo.arguments.contains("-tunebox-selftest")])
+        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        call.resolve([
+            "requested": ProcessInfo.processInfo.arguments.contains("-tunebox-selftest"),
+            "results": docs.appendingPathComponent("selftest.json").path,
+        ])
     }
 
     private static func object(_ json: String) throws -> [String: Any] {

@@ -26,7 +26,7 @@ export interface YtdlpPlugin {
   /** iOS only (no ffmpeg there): write tags and a JPEG cover into an .m4a/.mp3 file. */
   tag(options: { path: string; tags: Record<string, unknown>; cover?: string }): Promise<void>
   /** iOS only: whether the app was launched for the automated check. */
-  selfTest(): Promise<{ requested: boolean }>
+  selfTest(): Promise<{ requested: boolean; results: string }>
   addListener(event: 'progress', cb: (e: YtdlpProgress) => void): Promise<PluginListenerHandle>
 }
 

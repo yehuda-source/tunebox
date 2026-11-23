@@ -49,7 +49,7 @@ jobs:
           xcrun simctl boot "$UDID"
           xcrun simctl bootstatus "$UDID" -b
           xcrun simctl install "$UDID" build/sim/Build/Products/Debug-iphonesimulator/App.app
-          xcrun simctl launch "$UDID" com.tunebox.app -tunebox-selftest
+          xcrun simctl launch --stdout="$PWD/results/stdout.log" --stderr="$PWD/results/stderr.log" "$UDID" com.tunebox.app -tunebox-selftest
           DATA=$(xcrun simctl get_app_container "$UDID" com.tunebox.app data)
           for i in $(seq 1 60); do
             sleep 10
