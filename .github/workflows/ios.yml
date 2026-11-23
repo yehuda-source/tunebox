@@ -8,7 +8,11 @@ on:
     branches: [master, ios]
     paths:
       - 'ios/**'
-      - 'src/renderer/src/mobile/**'
+      - 'src/renderer/**'
+      - 'src/shared/**'
+      - 'package*.json'
+      - 'vite.mobile.config.ts'
+      - 'capacitor.config.ts'
       - 'scripts/ios-*'
       - '.github/workflows/ios.yml'
   workflow_dispatch:
