@@ -145,3 +145,9 @@ textarea {
 html[data-phone] ::-webkit-scrollbar {
   display: none;
 }
+/* Phone: the page itself never rubber-bands or slides; only scroll areas inside it move. */
+html[data-phone],
+html[data-phone] body {
+  overscroll-behavior: none;
+  overflow: hidden;
+}

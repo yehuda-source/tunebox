@@ -67,7 +67,7 @@ export function SearchView({ q }: { q: string }): React.JSX.Element {
 
   return (
     <Page>
-      <div className="sticky top-0 z-10 -mx-8 mb-2 bg-bg/90 px-8 py-3 backdrop-blur">
+      <div className="sticky top-0 z-10 -mx-8 mb-2 bg-bg/90 px-8 py-3 backdrop-blur max-sm:-mx-4 max-sm:px-4">
         <Tabs<Tab>
           value={tab}
           onChange={setTab}

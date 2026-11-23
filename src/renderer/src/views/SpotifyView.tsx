@@ -350,7 +350,7 @@ function Review(): React.JSX.Element {
         ))}
       </div>
 
-      <div className="sticky bottom-0 -mx-8 flex flex-wrap items-center gap-4 border-t border-line bg-bg/95 px-8 py-4 backdrop-blur">
+      <div className="sticky bottom-0 -mx-8 flex flex-wrap items-center gap-4 border-t border-line bg-bg/95 px-8 py-4 backdrop-blur max-sm:-mx-4 max-sm:px-4">
         <label className="flex items-center gap-2 text-[14px]">
           <input
             type="checkbox"

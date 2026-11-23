@@ -261,13 +261,14 @@ export function Tabs<T extends string>({
   onChange: (v: T) => void
 }): React.JSX.Element {
   return (
-    <div className="flex gap-2">
+    // Scrolls sideways on its own when the tabs don't fit (phones), instead of widening the page.
+    <div className="flex min-w-0 gap-2 overflow-x-auto [scrollbar-width:none]">
       {tabs.map((t) => (
         <button
           key={t.id}
           onClick={() => onChange(t.id)}
           className={cn(
-            'h-8 rounded-full px-4 text-[13px] font-medium transition-colors',
+            'h-8 shrink-0 whitespace-nowrap rounded-full px-4 text-[13px] font-medium transition-colors',
             value === t.id ? 'bg-fg text-bg' : 'bg-elev text-fg hover:bg-hover'
           )}
         >

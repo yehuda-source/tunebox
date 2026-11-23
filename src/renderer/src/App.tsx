@@ -27,6 +27,7 @@ import { initFollowStore } from './store/follows'
 import { player } from './store/player'
 import { ScrollContext } from './lib/scroll'
 import { platform } from './lib/platform'
+import { cn } from './lib/format'
 import { BottomTabs, MiniPlayer, NowPlaying } from './components/PhoneShell'
 
 let initialized = false
@@ -120,7 +121,14 @@ export default function App(): React.JSX.Element {
   }, [index])
 
   const content = (
-    <main ref={scrollRef} className="relative min-h-0 flex-1 overflow-y-auto">
+    <main
+      ref={scrollRef}
+      // Phones: never scroll the page sideways, even if something is a little too wide.
+      className={cn(
+        'relative min-h-0 flex-1 overflow-y-auto',
+        platform.phone && 'overflow-x-hidden'
+      )}
+    >
       <ScrollContext.Provider value={scrollEl}>
         <View key={JSON.stringify(route)} route={route} />
       </ScrollContext.Provider>
