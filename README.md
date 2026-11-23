@@ -2,7 +2,7 @@
 
 Search YouTube Music, play anything instantly, and download it into a tagged local library.
 Runs on Windows and Linux as a self-contained app (`.exe` / `.AppImage`); no browser or system tools needed.
-There is also an Android app (`.apk`) with its own library on the phone.
+There are also phone apps for Android (`.apk`) and iPhone (`.ipa`, sideloaded), each with its own library.
 
 Built with Electron + React (renderer) and Node (main process).
 
@@ -98,10 +98,28 @@ comes from the `ANDROID_KEYSTORE_BASE64` and `ANDROID_KEYSTORE_PASSWORD` secrets
 `npx electron scripts/phone-shot.mjs out.png` screenshots the browser preview at phone size
 (open it with `?phone` to get the phone layout in a normal browser).
 
+### iPhone
+
+Same UI and phone backend as Android; the native side is in `ios/App/App/Native`. iOS doesn't
+let apps start other programs, so yt-dlp runs inside the app in embedded Python
+([Python-Apple-support](https://github.com/beeware/Python-Apple-support)), driven by
+`ios/App/python-app/tunebox_bridge.py`. YouTube's JavaScript challenges are solved by
+JavaScriptCore through a yt-dlp challenge provider registered by the bridge; the solver scripts
+come with yt-dlp, so yt-dlp updates downloaded at runtime keep everything current. Tags are
+written with mutagen (there's no ffmpeg on iOS, so songs stay in YouTube's AAC as `.m4a`), and
+streams play as HLS in AVPlayer.
+
+Building needs a Mac, so it runs on GitHub Actions (`.github/workflows/ios.yml`): a simulator
+build with an end-to-end self-test (screenshots and results under the run's Artifacts) and an
+unsigned `.ipa` to sign with Signulous. YouTube usually blocks GitHub's servers, so the self-test
+then checks the same pieces with non-YouTube media. Locally, `scripts/ios-prepare.sh` fetches
+Python, yt-dlp, mutagen and certifi, and `scripts/ios-configure-project.py` (re)applies the Xcode
+project setup. The Python bridge can be tested on Linux with Node standing in for JavaScriptCore.
+
 ### Releases
 
 Bump the version, then push a matching tag. GitHub Actions builds Windows (installer + portable
-`.exe`), Linux (`.AppImage`) and Android (`.apk` per CPU type) and publishes them as a GitHub Release:
+`.exe`), Linux (`.AppImage`), Android (`.apk` per CPU type) and iPhone (unsigned `.ipa`) and publishes them as a GitHub Release:
 
 ```bash
 npm version 1.2.3 && git push && git push --tags
@@ -121,6 +139,7 @@ src/preload/     contextBridge: exposes the typed window.api
 src/shared/      types and logic shared by the desktop backend and the phone app
 src/renderer/    React UI (Tailwind, Zustand, Radix); src/renderer/src/mobile is the phone backend
 android/         Android project (Capacitor) with the native plugins
+ios/             iOS project (Capacitor): Swift plugins, embedded Python bridge
 scripts/         fetch-binaries.mjs, emulator/test helpers
 test/            vitest unit tests; test/ui renders the app against the fake backend
 ```

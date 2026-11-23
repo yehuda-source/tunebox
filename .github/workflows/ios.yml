@@ -5,8 +5,14 @@ name: iOS
 # unsigned .ipa to sign with Signulous (or any re-signing service).
 on:
   push:
-    branches: [ios]
+    branches: [master, ios]
+    paths:
+      - 'ios/**'
+      - 'src/renderer/src/mobile/**'
+      - 'scripts/ios-*'
+      - '.github/workflows/ios.yml'
   workflow_dispatch:
+  # The release workflow (build.yml) runs this for version tags and attaches the .ipa.
   workflow_call:
 
 jobs:
@@ -83,7 +89,7 @@ jobs:
       - uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: tunebox-ios-test
+          name: ios-selftest
           path: |
             results/
             build-*.log

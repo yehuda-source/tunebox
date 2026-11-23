@@ -1,6 +1,6 @@
 # TuneBox mobile plan (Android + iOS)
 
-Status: **Android in progress** (started 2026-11-21); iPhone bridge after Android.
+Status: **Android and iPhone core done** (2026-11-23); follows and Spotify on phones later.
 
 Decisions (2026-11-21): both platforms; phone keeps **its own library**; test Android in a local
 emulator; build iOS on GitHub Actions (no Mac); **core features first**.
@@ -25,6 +25,13 @@ emulator; build iOS on GitHub Actions (no Mac); **core features first**.
   works alone any more). The next track in a queue is resolved ahead of time. Downloads run while
   the app is open or playing; there's no separate background-download service yet.
 - Later on Android: follows with auto-download, Spotify import, a download foreground service.
+- 2026-11-23: **iPhone app works** (simulator on GitHub Actions; unsigned .ipa for Signulous).
+  Embedded Python 3.14 (BeeWare) runs yt-dlp in-process via `ios/App/python-app/tunebox_bridge.py`;
+  a yt-dlp JS challenge provider evaluates the solver in JavaScriptCore (3.5 s per solve without
+  JIT, same answer as Node). Python + yt-dlp start in ~2 s; tags via mutagen, covers via UIKit,
+  HLS streaming with AVPlayer, lock screen via MPNowPlayingInfoCenter. yt-dlp updates at runtime
+  from the release zip (which includes the solver scripts). YouTube blocks GitHub's servers, so
+  YouTube streaming/downloading on iPhone still needs a check on a real phone.
 - Tooling: SDK in ~/Android/Sdk, AVD "tunebox" (Pixel 8, Android 16). Start with
   `scripts/android-emulator.sh` (guest GPU, Vulkan off: the default renderer segfaults). Inspect the
   app's WebView: `adb forward tcp:9230 localabstract:webview_devtools_remote_$(adb shell pidof com.tunebox.app)`
