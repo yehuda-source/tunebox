@@ -1,5 +1,6 @@
 // Phone settings (localStorage) and the app's folders.
 import type { Settings } from '@shared/types'
+import { isIos } from './native'
 
 const KEY = 'tunebox.settings'
 const DEFAULTS: Settings = {
@@ -45,7 +46,12 @@ function load(): Settings {
 
 let current = load()
 
-export const getSettings = (): Settings => ({ ...current, libraryDir: paths.music })
+export const getSettings = (): Settings => ({
+  ...current,
+  libraryDir: paths.music,
+  // iOS keeps YouTube's AAC audio as is (no ffmpeg to convert).
+  ...(isIos ? { format: 'm4a' as const, bitrate: 0 } : {})
+})
 
 export function setSettings(patch: Partial<Settings>): Settings {
   current = { ...current, ...patch }

@@ -9,7 +9,7 @@ import { SongIndex } from '@shared/songKey'
 import { db } from './db'
 import { emit } from './events'
 import { addDownloaded } from './library'
-import { Files } from './native'
+import { Files, isIos } from './native'
 import { getSettings, paths } from './settings'
 import { prepareCover, writeTags } from './tags'
 import { cancelYtdlp, ytdlp, YtdlpError } from './ytdlp'
@@ -205,7 +205,8 @@ async function pipeline(job: DownloadJob, work: string, stopped: () => boolean):
   let lastEmit = 0
   await ytdlp(
     [
-      ...formatArgs(s.format, s.bitrate),
+      // iOS can't convert (no ffmpeg): YouTube's AAC stream is saved as is.
+      ...(isIos ? ['-f', 'bestaudio[ext=m4a]/bestaudio'] : formatArgs(s.format, s.bitrate)),
       '--no-playlist',
       '--newline',
       '--progress',
@@ -238,7 +239,9 @@ async function pipeline(job: DownloadJob, work: string, stopped: () => boolean):
     filepath && (await Files.stat({ path: filepath })).exists ? filepath : null
   if (!produced) {
     const { names } = await Files.list({ path: work })
-    const name = names.find((n) => n.startsWith('audio.') && n.endsWith(`.${s.format}`))
+    const name = names.find(
+      (n) => n.startsWith('audio.') && (isIos ? !n.endsWith('.part') : n.endsWith(`.${s.format}`))
+    )
     produced = name ? `${work}/${name}` : null
   }
   if (!produced) throw new Error('yt-dlp finished but no audio file was produced.')

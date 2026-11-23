@@ -21,3 +21,6 @@ void App.addListener('backButton', () => {
   if (nav.index > 0) nav.back()
   else void App.minimizeApp()
 })
+
+// CI: the iOS workflow launches the app with -tunebox-selftest to check it end to end.
+void import('./selftest').then((m) => m.runSelfTestIfRequested())

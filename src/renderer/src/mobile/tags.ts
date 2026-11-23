@@ -1,7 +1,8 @@
-// Cover art and tags on the phone, with the ffmpeg that ships inside youtubedl-android.
-// Same approach as the desktop tagger (src/main/library/tagger.ts).
+// Cover art and tags on the phone. Android uses the ffmpeg that ships inside youtubedl-android
+// (same approach as the desktop tagger, src/main/library/tagger.ts); iOS has no ffmpeg, so the
+// cover is cropped natively and tags are written by mutagen in the embedded Python.
 import { metadataArgs, type Tags } from '@shared/tags'
-import { Files } from './native'
+import { Files, Ytdlp, isIos } from './native'
 
 async function ffmpeg(args: string[]): Promise<void> {
   const r = await Files.ffmpeg({ args: ['-y', '-loglevel', 'error', ...args] })
@@ -17,6 +18,10 @@ export async function prepareCover(
   const raw = `${workDir}/cover-src`
   const out = `${workDir}/cover.jpg`
   try {
+    if (isIos) {
+      await Files.squareCover({ url, path: out })
+      return out
+    }
     await Files.download({ url, path: raw })
     await ffmpeg([
       '-i',
@@ -38,6 +43,10 @@ export async function prepareCover(
 
 /** Rewrite tags (and cover art, except for Opus) in place. */
 export async function writeTags(file: string, tags: Tags, cover: string | null): Promise<void> {
+  if (isIos) {
+    await Ytdlp.tag({ path: file, tags: { ...tags }, cover: cover ?? undefined })
+    return
+  }
   const ext = file.slice(file.lastIndexOf('.')).toLowerCase()
   const ogg = ext === '.opus' || ext === '.ogg'
   const tmp = `${file}.tagging${ext}`

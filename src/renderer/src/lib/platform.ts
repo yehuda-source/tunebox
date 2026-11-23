@@ -6,6 +6,8 @@ export interface Platform {
   createAudio?: () => HTMLAudioElement
   /** Told what is about to play (title, artist, cover) before the audio source changes. */
   nowPlaying?: (item: { title: string; artist: string; album?: string; cover?: string }) => void
+  /** Set when the audio format can't be chosen (iPhone: no ffmpeg); explains what is saved. */
+  fixedFormat?: string
   /** Where a library track's cover image is served. */
   coverUrl?: (trackId: number) => string
 }

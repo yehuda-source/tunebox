@@ -49,7 +49,7 @@ public class YtdlpPlugin extends Plugin {
     }
 
     @PluginMethod
-    public void init(PluginCall call) {
+    public void start(PluginCall call) {
         pool.execute(() -> {
             try {
                 ensureInit();

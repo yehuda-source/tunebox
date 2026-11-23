@@ -1,7 +1,7 @@
 // Running yt-dlp on the phone (through the Ytdlp plugin): plain runs with live output, JSON
 // listings for the shared parsers, and stream URLs for playback.
 import type { YtdlpEntry } from '@shared/ytdlpEntries'
-import { Ytdlp } from './native'
+import { Ytdlp, isIos } from './native'
 
 export class YtdlpError extends Error {
   constructor(
@@ -88,7 +88,11 @@ export function resolveStream(videoId: string): Promise<Stream> {
       const out = await ytdlp([
         '--no-playlist',
         '-f',
-        'bestaudio[ext=m4a]/bestaudio[ext=webm]/bestaudio',
+        // AVPlayer streams HLS natively (and HLS needs no byte-range workaround); ExoPlayer
+        // handles the plain files, with ranges translated in PlaybackService.
+        isIos
+          ? 'bestaudio[protocol^=m3u8]/bestaudio[ext=m4a]/bestaudio'
+          : 'bestaudio[ext=m4a]/bestaudio[ext=webm]/bestaudio',
         '-O',
         '%(url)s',
         '-O',

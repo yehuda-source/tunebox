@@ -1,0 +1,94 @@
+name: iOS
+
+# Builds the iPhone app on a Mac runner: runs it in the simulator with an end-to-end self-test
+# (search, stream, download, playback; screenshots and results under Artifacts), then builds an
+# unsigned .ipa to sign with Signulous (or any re-signing service).
+on:
+  push:
+    branches: [ios]
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  ios:
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Build the web app and sync it into the iOS project
+        run: npx vite build --config vite.mobile.config.ts && npx cap sync ios
+      - name: Fetch Python for iOS, yt-dlp, mutagen, certifi
+        run: scripts/ios-prepare.sh
+      - name: Version
+        run: |
+          echo "VERSION=$(node -p "require('./package.json').version")" >> "$GITHUB_ENV"
+          echo "BUILD_NUMBER=$GITHUB_RUN_NUMBER" >> "$GITHUB_ENV"
+
+      - name: Build for the simulator
+        run: |
+          set -o pipefail
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build/sim ARCHS=arm64 ONLY_ACTIVE_ARCH=YES CODE_SIGNING_ALLOWED=NO \
+            build 2>&1 | tee build-sim.log | grep -E 'error:|BUILD (SUCCEEDED|FAILED)|\*\* ' || true
+          test -d build/sim/Build/Products/Debug-iphonesimulator/App.app
+
+      - name: Self-test in the simulator
+        run: |
+          mkdir -p results
+          UDID=$(xcrun simctl list devices available -j | python3 -c "
+          import json, sys
+          d = json.load(sys.stdin)['devices']
+          phones = [x for rt, xs in d.items() if 'iOS' in rt for x in xs if x['name'].startswith('iPhone')]
+          print(phones[-1]['udid'])")
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl install "$UDID" build/sim/Build/Products/Debug-iphonesimulator/App.app
+          xcrun simctl launch "$UDID" com.tunebox.app -tunebox-selftest
+          DATA=$(xcrun simctl get_app_container "$UDID" com.tunebox.app data)
+          for i in $(seq 1 60); do
+            sleep 10
+            xcrun simctl io "$UDID" screenshot "results/screen-$(printf %03d $((i*10)))s.png" >/dev/null 2>&1 || true
+            if [ -f "$DATA/Documents/selftest.json" ] && grep -q '"done": true' "$DATA/Documents/selftest.json"; then break; fi
+          done
+          cp "$DATA/Documents/selftest.json" results/ 2>/dev/null || echo '{"done": false, "steps": []}' > results/selftest.json
+          xcrun simctl spawn "$UDID" log show --last 15m --style compact --predicate 'process == "App"' > results/app.log 2>&1 || true
+          cat results/selftest.json
+          python3 -c "
+          import json, sys
+          r = json.load(open('results/selftest.json'))
+          bad = [s for s in r['steps'] if not s['ok']]
+          sys.exit(0 if r['done'] and r['steps'] and not bad else 1)"
+
+      - name: Build the unsigned .ipa
+        if: always()
+        run: |
+          set -o pipefail
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release \
+            -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build/device \
+            ARCHS=arm64 CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+            MARKETING_VERSION="$VERSION" CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
+            build 2>&1 | tee build-device.log | grep -E 'error:|BUILD (SUCCEEDED|FAILED)|\*\* ' || true
+          mkdir -p Payload ipa
+          cp -R build/device/Build/Products/Release-iphoneos/App.app Payload/
+          zip -qry "ipa/TuneBox-$VERSION-ios-unsigned.ipa" Payload
+          ls -la ipa
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: tunebox-ios-test
+          path: |
+            results/
+            build-*.log
+      - uses: actions/upload-artifact@v7
+        if: success()
+        with:
+          name: tunebox-ios
+          path: ipa/*.ipa
+          if-no-files-found: error

@@ -10,14 +10,19 @@ import { db, flush, openDb } from './db'
 import * as downloads from './downloads'
 import { emit, on } from './events'
 import * as library from './library'
-import { Files, NativePlayer, Ytdlp } from './native'
+import { Files, NativePlayer, Ytdlp, isIos } from './native'
 import { getSettings, paths, setSettings } from './settings'
 import { resolveStream, ytdlpJson } from './ytdlp'
 
 let tools: ToolStatus = {
   ytdlp: { path: null, version: null, source: 'missing' },
-  ffmpeg: { path: 'bundled', version: 'bundled with the app', source: 'bundled' },
-  jsRuntime: { mode: 'system', detail: 'QuickJS (bundled with yt-dlp for Android)' },
+  ffmpeg: isIos
+    ? { path: null, version: 'not needed on iPhone', source: 'bundled' }
+    : { path: 'bundled', version: 'bundled with the app', source: 'bundled' },
+  jsRuntime: {
+    mode: 'system',
+    detail: isIos ? 'JavaScriptCore (built into iOS)' : 'QuickJS (bundled with yt-dlp for Android)'
+  },
   selfTest: null,
   busy: null,
   lastUpdateCheck: Number(localStorage.getItem('tunebox.ytdlpChecked')) || null,
@@ -63,7 +68,7 @@ let ready: Promise<void> = new Promise(() => undefined)
 
 async function start(): Promise<void> {
   setTools({ busy: 'Preparing yt-dlp…' })
-  const r = await Ytdlp.init()
+  const r = await Ytdlp.start()
   const dirs = await Files.dirs()
   paths.music = r.musicDir
   paths.covers = `${dirs.external}/covers`
@@ -112,7 +117,7 @@ const api: TuneboxApi = {
   app: {
     info: async (): Promise<AppInfo> => ({
       version: (await App.getInfo()).version,
-      platform: 'android' as NodeJS.Platform,
+      platform: (isIos ? 'ios' : 'android') as NodeJS.Platform,
       userData: paths.data,
       logsDir: ''
     }),
@@ -223,6 +228,9 @@ export async function installMobileApi(): Promise<void> {
   platform.createAudio = () => audio
   platform.coverUrl = library.coverUrl
   platform.nowPlaying = setNowPlaying
+  if (isIos)
+    platform.fixedFormat =
+      'M4A (AAC), YouTube’s original audio with no re-encoding. Converting to MP3 or Opus isn’t available on iPhone.'
   ready = start()
   ready.catch((err) =>
     setTools({ busy: null, selfTest: { ok: false, message: String(err), at: Date.now() } })

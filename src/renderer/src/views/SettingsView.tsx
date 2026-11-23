@@ -36,7 +36,7 @@ function Row({
 }: {
   label: string
   hint?: ReactNode
-  children: ReactNode
+  children?: ReactNode
 }): React.JSX.Element {
   return (
     <div className="flex items-center justify-between gap-6">
@@ -245,33 +245,39 @@ export function SettingsView(): React.JSX.Element {
       </Section>
 
       <Section title="Downloads">
-        <Row
-          label="Audio format"
-          hint="MP3 plays everywhere. M4A and Opus keep YouTube’s original quality with no re-encoding."
-        >
-          <Segmented
-            value={s.format}
-            onChange={(format) =>
-              // Keep the chosen bitrate only if the new format offers it.
-              set({
-                format,
-                bitrate: QUALITY[format].some((q) => q.kbps === s.bitrate) ? s.bitrate : 0
-              })
-            }
-            options={[
-              { id: 'mp3', label: 'MP3' },
-              { id: 'm4a', label: 'M4A' },
-              { id: 'opus', label: 'Opus' }
-            ]}
-          />
-        </Row>
-        <Row label="Quality" hint={QUALITY_HINT[s.format]}>
-          <Segmented
-            value={String(s.bitrate)}
-            onChange={(v) => set({ bitrate: Number(v) })}
-            options={QUALITY[s.format].map((q) => ({ id: String(q.kbps), label: q.label }))}
-          />
-        </Row>
+        {platform.fixedFormat ? (
+          <Row label="Audio format" hint={platform.fixedFormat} />
+        ) : (
+          <>
+            <Row
+              label="Audio format"
+              hint="MP3 plays everywhere. M4A and Opus keep YouTube’s original quality with no re-encoding."
+            >
+              <Segmented
+                value={s.format}
+                onChange={(format) =>
+                  // Keep the chosen bitrate only if the new format offers it.
+                  set({
+                    format,
+                    bitrate: QUALITY[format].some((q) => q.kbps === s.bitrate) ? s.bitrate : 0
+                  })
+                }
+                options={[
+                  { id: 'mp3', label: 'MP3' },
+                  { id: 'm4a', label: 'M4A' },
+                  { id: 'opus', label: 'Opus' }
+                ]}
+              />
+            </Row>
+            <Row label="Quality" hint={QUALITY_HINT[s.format]}>
+              <Segmented
+                value={String(s.bitrate)}
+                onChange={(v) => set({ bitrate: Number(v) })}
+                options={QUALITY[s.format].map((q) => ({ id: String(q.kbps), label: q.label }))}
+              />
+            </Row>
+          </>
+        )}
         <Row label="Simultaneous downloads">
           <Segmented
             value={String(s.concurrency)}
