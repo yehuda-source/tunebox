@@ -143,7 +143,7 @@ export function DialogHost(): React.JSX.Element {
     <Dialog.Root open={!!req} onOpenChange={(o) => !o && close()}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[min(480px,92vw)] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-line bg-panel p-6 shadow-2xl outline-none">
+        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 max-h-[85dvh] w-[min(480px,92vw)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-2xl border border-line bg-panel p-6 shadow-2xl outline-none">
           {req?.kind === 'prompt' && <PromptForm key={req.title} req={req} close={close} />}
           {req?.kind === 'confirm' && (
             <div className="flex flex-col gap-4">

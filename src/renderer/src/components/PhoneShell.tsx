@@ -67,7 +67,7 @@ export function BottomTabs(): React.JSX.Element {
       ).length
   )
   return (
-    <nav className="flex h-16 shrink-0 border-t border-line bg-panel pb-[env(safe-area-inset-bottom)]">
+    <nav className="flex h-[calc(4rem+env(safe-area-inset-bottom))] shrink-0 border-t border-line bg-panel pb-[env(safe-area-inset-bottom)]">
       <Tab icon={Home} label="Home" route={{ name: 'home' }} active={route.name === 'home'} />
       <Tab
         icon={Search}

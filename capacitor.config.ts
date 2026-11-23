@@ -11,6 +11,12 @@ const config: CapacitorConfig = {
     CapacitorHttp: { enabled: true },
     // Light status/navigation bar icons: TuneBox is dark.
     SystemBars: { style: 'DARK' }
+  },
+  ios: {
+    // The app's layout fits the screen and scrolls inside; the web view itself must not scroll or
+    // bounce, or the player and tabs slide off-screen.
+    scrollEnabled: false,
+    contentInset: 'never'
   }
 }
 
